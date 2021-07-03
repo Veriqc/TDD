@@ -224,14 +224,14 @@ def find_computed_table(item):
             tdd.weight = res[0]
             hit_time[0]+=1            
             return tdd
-#         the_key=('*',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node,temp_key1,temp_key0)
-#         find_time[1]+=1
-#         if computed_table.__contains__(the_key):
-#             res = computed_table[the_key]
-#             tdd = TDD(res[1])
-#             tdd.weight = res[0]
-#             hit_time[1]+=1            
-#             return tdd
+        the_key=('*',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node,temp_key1,temp_key0)
+        find_time[1]+=1
+        if computed_table.__contains__(the_key):
+            res = computed_table[the_key]
+            tdd = TDD(res[1])
+            tdd.weight = res[0]
+            hit_time[1]+=1            
+            return tdd
     return None
 
 # def get_hash_key(idx_2_new_idx):
