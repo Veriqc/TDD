@@ -78,7 +78,6 @@ def Ini_TDD(var_order=[]):
     unique_table = dict()
     computed_table = dict()
     set_index_order(var_order)
-#     print(global_index_order)
     return get_identity_tdd()
 
 def get_identity_tdd():
@@ -182,10 +181,17 @@ def normalize(x,low,high):
     res.weight=weig
     return res
         
-        
+cont_time=0
+find_time=[0,0]
+hit_time=[0,0]
+
+def get_count():
+    global computed_table,cont_time,find_time,hit_time
+    print(cont_time,find_time,hit_time)
+
 def find_computed_table(item):
     """To return the results that already exist"""
-    global computed_table
+    global computed_table,cont_time,find_time,hit_time
     if item[0]=='s':
         temp_key=item[1].index_2_key[item[2]]
         the_key=('s',get_int_key(item[1].weight),item[1].node,temp_key,item[3])
@@ -208,65 +214,50 @@ def find_computed_table(item):
             tdd.weight = res[0]
             return tdd
     else:
-        temp_key=(tuple(item[3][0]),tuple(item[3][1]))
-        temp_key2=get_hash_key(item[1].index_2_key,item[2].index_2_key)
-        the_key=('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,temp_key,temp_key2)
+        temp_key0=tuple(item[3][0])
+        temp_key1=tuple(item[3][1])
+        the_key=('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,temp_key0,temp_key1)
+        find_time[0]+=1
         if computed_table.__contains__(the_key):
             res = computed_table[the_key]
             tdd = TDD(res[1])
             tdd.weight = res[0]
+            hit_time[0]+=1            
             return tdd
-        temp_key=(tuple(item[3][1]),tuple(item[3][0]))
-        temp_key2=get_hash_key(item[2].index_2_key,item[1].index_2_key)
-        the_key=('*',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node,temp_key,temp_key2)
-        if computed_table.__contains__(the_key):
-            res = computed_table[the_key]
-            tdd = TDD(res[1])
-            tdd.weight = res[0]
-            return tdd
+#         the_key=('*',get_int_key(item[2].weight),item[2].node,get_int_key(item[1].weight),item[1].node,temp_key1,temp_key0)
+#         find_time[1]+=1
+#         if computed_table.__contains__(the_key):
+#             res = computed_table[the_key]
+#             tdd = TDD(res[1])
+#             tdd.weight = res[0]
+#             hit_time[1]+=1            
+#             return tdd
     return None
 
-
-def get_hash_key(idx_2_key1,idx_2_key2):
-    A=set(idx_2_key1.keys())|set(idx_2_key2.keys())
-    index_sort=[]
-    res=[]
-    for k in A:
-        index_sort.append((global_index_order[k],k))
-    index_sort.sort()
-    
-    for k in index_sort:
-        if k[1] in idx_2_key1 and k[1] in idx_2_key2:
-            res.append((1,2))
-        elif k[1] in idx_2_key1:
-            res.append(1)
-        else:
-            res.append(2)
-    return tuple(res)
+# def get_hash_key(idx_2_new_idx):
+#     res=[]
+#     for k in idx_2_new_idx:
+#         res.append((k,idx_2_new_idx[k]))
+#     return tuple(res)
 
 def insert_2_computed_table(item,res):
     """To insert an item to the computed table"""
-    global computed_table
+    global computed_table,cont_time,find_time,hit_time
     if item[0]=='s':
         temp_key=item[1].index_2_key[item[2]]
         the_key = ('s',get_int_key(item[1].weight),item[1].node,temp_key,item[3])
     elif item[0] == '+':
-#         temp_key=get_hash_key(item[1].index_2_key,item[2].index_2_key)
         the_key = ('+',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
     else:
-        temp_key=(tuple(item[3][0]),tuple(item[3][1]))
-        temp_key2=get_hash_key(item[1].index_2_key,item[2].index_2_key)
-        the_key = ('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,temp_key,temp_key2)
-#         print(temp_key)
-#         print(temp_key2)
+        temp_key0=tuple(item[3][0])
+        temp_key1=tuple(item[3][1])
+        the_key = ('*',get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node,temp_key0,temp_key1)
+        cont_time+=1
     computed_table[the_key] = (res.weight,res.node)
     
 
 def Single_qubit_gate_2TDD(U,var):
     """Get the TDD of a 2*2 matrix, here var = [column index, row index]"""
-#     print('xxxx')
-#     for k in var:
-#         print(k)
     idx_2_key={-1:-1}
     key_2_idx={-1:-1}
     if var[0]<var[1]:
@@ -303,9 +294,6 @@ def diag_matrix_2_TDD(U,var):
     return res
 
 def cnot_2_TDD(var,case=1):
-#     print('ccccc')
-#     for k in var:
-#         print(k)
     
     if case==2:
         term=Find_Or_Add_Unique_table(-1)
@@ -386,89 +374,95 @@ def np_2_tdd(U,split_pos=None):
     tdd = normalize(split_pos, low, high)
     return tdd
     
+def get_hash_key(tdd1,tdd2):
+    var=tdd1.index_set+tdd2.index_set
+    var.sort()
+    var_index=set([k.key for k in var])
     
-def get_contract_index(tdd1,tdd2):    
-    var_out=[]
-    var_cont=[]
-    for var in tdd1.index_set:
-        if var in tdd2.index_set:
-            if not var.key in var_cont:
-                var_cont.append(var.key)
+    for k in var_index:
+        if k in tdd1.index_2_key and k in tdd2.index_2_key:
+            res.append((1,2))
+        elif k in tdd1.index_2_key:
+            res.append(1)
         else:
-            var_out.append(var)
-    for var in tdd2.index_set:
-        if not var in tdd1.index_set:
-            var_out.append(var)
-    var_out_key=[]
-    for var in var_out:
-        var_out_key.append(var.key)
-        
-    var_temp=[]
-    for var in var_cont:
-        if not var in var_out_key:
-            var_temp.append((global_index_order[var],var))
-    var_temp.sort()
-    var_cont=[]
+            res.append(2)
+    return tuple(res)
     
-    for item in var_temp:
-        var_cont.append(item[1])
     
-    return var_out,var_cont
-
 def cont(tdd1,tdd2):
-    var_out,var_cont=get_contract_index(tdd1,tdd2)
+    var_cont=[var for var in tdd1.index_set if var in tdd2.index_set]
+    var_out1=[var for var in tdd1.index_set if not var in var_cont]
+    var_out2=[var for var in tdd2.index_set if not var in var_cont]
+    var_out=var_out1+var_out2
     var_out.sort()
+    var_out_idx=[var.key for var in var_out]
+    var_cont_idx=[var.key for var in var_cont]
+    var_cont_idx=[var for var in var_cont_idx if not var in var_out_idx]
+    
     idx_2_key={-1:-1}
     key_2_idx={-1:-1}
+    
     n=0
-    for k in range(len(var_out)-1,-1,-1):
-        if not var_out[k].key in idx_2_key:
-            idx_2_key[var_out[k].key]=n
-            key_2_idx[n]=var_out[k].key
+    for k in range(len(var_out_idx)-1,-1,-1):
+        if not var_out_idx[k] in idx_2_key:
+            idx_2_key[var_out_idx[k]]=n
+            key_2_idx[n]=var_out_idx[k]
             n+=1
-    new_var_cont=[[],[]]
-    for k in var_cont:
-        new_var_cont[0].append(tdd1.index_2_key[k])
-        new_var_cont[1].append(tdd2.index_2_key[k]) 
-    tdd=contract(tdd1,tdd2,new_var_cont,idx_2_key)
+        
+    key_2_new_key=[[],[]]
+    cont_order=[[],[]]
+    for k in range(len(tdd1.key_2_index)-1):
+        v=tdd1.key_2_index[k]
+        if v in idx_2_key:
+            key_2_new_key[0].append(idx_2_key[v])
+        else:
+            key_2_new_key[0].append('c')
+        cont_order[0].append(global_index_order[v])
+        
+    key_2_new_key[0].append(-1)
+    cont_order[0].append(float('inf'))
+
+    for k in range(len(tdd2.key_2_index)-1):
+        v=tdd2.key_2_index[k]
+        if v in idx_2_key:
+            key_2_new_key[1].append(idx_2_key[v])
+        else:
+            key_2_new_key[1].append('c')
+        cont_order[1].append(global_index_order[v])
+    key_2_new_key[1].append(-1)
+    cont_order[1].append(float('inf'))
+#     cont_order_together=cont_order[0]+cont_order[1]
+#     cont_order_together.sort()
+#     cont_order_together=list(set(cont_order_together))
+#     cont_order_normlise=dict()
+#     for k in range(len(cont_order_together)):
+#         cont_order_normlise[cont_order_together[k]]=k
+    
+#     new_cont_order=[[],[]]
+#     for k in cont_order[0]:
+#         new_cont_order[0].append(cont_order_normlise[k])
+#     for k in cont_order[1]:
+#         new_cont_order[1].append(cont_order_normlise[k])
+#     new_cont_order[0].append(float('inf'))
+#     new_cont_order[1].append(float('inf'))
+#     print('-----------------')
+#     print(cont_order)
+#     print(new_cont_order)
+#     print('-----------------')
+    tdd=contract(tdd1,tdd2,key_2_new_key,cont_order,len(set(var_cont_idx)))
     tdd.index_set=var_out
     tdd.index_2_key=idx_2_key
     tdd.key_2_index=key_2_idx
-#     print('=====================================')
-#     for k in tdd1.index_set:
-#         print(k)
-#     print(tdd1.index_2_key)
-#     print(tdd1.key_2_index)
-#     print('------------------------------')
-#     for k in tdd2.index_set:
-#         print(k)
-#     print(tdd2.index_2_key)
-#     print(tdd2.key_2_index)
-#     print('------------------------------')
-#     for k in tdd.index_set:
-#         print(k)
-#     print(tdd.index_2_key)
-#     print(tdd.key_2_index)
-#     print('=====================================')
     return tdd
     
-    
-def contract(tdd1,tdd2,var_cont,idx_2_key):
+def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
     
     k1=tdd1.node.key
     k2=tdd2.node.key
-    v1=tdd1.key_2_index[k1]
-    v2=tdd2.key_2_index[k2]
-    
-#     print('---------')
-#     print(k1,v1)
-#     print(k2,v2)
-#     print(var_cont)
-#     print('---------')
     
     if k1==-1 and k2==-1:
-        weig=(2**len(var_cont[0]))*tdd1.weight*tdd2.weight
+        weig=(2**cont_num)*tdd1.weight*tdd2.weight
         term=Find_Or_Add_Unique_table(-1)
         tdd=TDD(term)
         if get_int_key(weig)==(0,0):
@@ -478,7 +472,7 @@ def contract(tdd1,tdd2,var_cont,idx_2_key):
         return tdd
 
     if k1==-1:
-        if len(var_cont[0])==0 and idx_2_key[v2]==k2:
+        if cont_num ==0 and key_2_new_key[1][k2]==k2:
             weig=tdd1.weight*tdd2.weight
             if get_int_key(weig)==(0,0):
                 term=Find_Or_Add_Unique_table(-1)
@@ -490,7 +484,7 @@ def contract(tdd1,tdd2,var_cont,idx_2_key):
             return tdd
             
     if k2==-1:
-        if len(var_cont[0])==0 and idx_2_key[v1]==k1:
+        if cont_num ==0 and key_2_new_key[0][k1]==k1:
             weig=tdd1.weight*tdd2.weight
             if get_int_key(weig)==(0,0):
                 term=Find_Or_Add_Unique_table(-1)
@@ -506,165 +500,51 @@ def contract(tdd1,tdd2,var_cont,idx_2_key):
     tdd1.weight=1
     tdd2.weight=1
     
-    if find_computed_table(['*',tdd1,tdd2,var_cont]):
-        tdd = find_computed_table(['*',tdd1,tdd2,var_cont])
+    if find_computed_table(['*',tdd1,tdd2,key_2_new_key]):
+        tdd = find_computed_table(['*',tdd1,tdd2,key_2_new_key])
         tdd.weight=tdd.weight*w1*w2
         return tdd
-    
-    global global_index_order
-    
-    if global_index_order[v1]<=global_index_order[v2]:
-        t=0
+                
+                
+    temp_key_2_new_key=[copy.copy(key_2_new_key[0]),copy.copy(key_2_new_key[1])]
+    if cont_order[0][k1]<cont_order[1][k2]:
+        case=0
         k=k1
-        x=v1
+        s0=k1
+        s1=float('inf')
+        temp_key_2_new_key[0].pop(s0)
+    elif cont_order[0][k1]==cont_order[1][k2]:
+        case=0
+        k=k1
+        s0=k1
+        s1=k2
+        temp_key_2_new_key[0].pop(s0)
+        temp_key_2_new_key[1].pop(s1)
     else:
-        t=1
+        case=1
         k=k2
-        x=v2
-#     print(t,k,x,var_cont[t])
+        s0=float('inf')
+        s1=k2
+        temp_key_2_new_key[1].pop(s1)
+            
         
-    if not k in var_cont[t]:
-        low=contract(Slicing1(tdd1,x,0),Slicing1(tdd2,x,0),var_cont,idx_2_key)
-        high=contract(Slicing1(tdd1,x,1),Slicing1(tdd2,x,1),var_cont,idx_2_key)
-        tdd=normalize(idx_2_key[x],low,high)
-        insert_2_computed_table(['*',tdd1,tdd2,var_cont],tdd)
+    if key_2_new_key[case][k]!='c':
+        low=contract(Slicing(tdd1,s0,0),Slicing(tdd2,s1,0),temp_key_2_new_key,cont_order,cont_num)
+        high=contract(Slicing(tdd1,s0,1),Slicing(tdd2,s1,1),temp_key_2_new_key,cont_order,cont_num)
+        tdd=normalize(key_2_new_key[case][k],low,high)
+        insert_2_computed_table(['*',tdd1,tdd2,key_2_new_key],tdd)
         tdd.weight=tdd.weight*w1*w2
         return tdd
     
     else:
-        new_var_cont=[copy.copy(var_cont[0]),copy.copy(var_cont[1])]
-        new_var_cont[0].remove(tdd1.index_2_key[x])
-        new_var_cont[1].remove(tdd2.index_2_key[x])
-        low=contract(Slicing1(tdd1,x,0),Slicing1(tdd2,x,0),new_var_cont,idx_2_key)
-        high=contract(Slicing1(tdd1,x,1),Slicing1(tdd2,x,1),new_var_cont,idx_2_key)
+        low=contract(Slicing(tdd1,s0,0),Slicing(tdd2,s1,0),temp_key_2_new_key,cont_order,cont_num-1)
+        high=contract(Slicing(tdd1,s0,1),Slicing(tdd2,s1,1),temp_key_2_new_key,cont_order,cont_num-1)
         tdd=add(low,high)
-        insert_2_computed_table(['*',tdd1,tdd2,var_cont],tdd)
+        insert_2_computed_table(['*',tdd1,tdd2,key_2_new_key],tdd)
         tdd.weight=tdd.weight*w1*w2
         return tdd
     
 def Slicing(tdd,x,c):
-    """Slice a TDD with respect to x=c"""
-    global global_index_order
-    
-    k=tdd.node.key
-    v=tdd.key_2_index[k]
-    
-    if k==-1:
-        return tdd.self_copy()
-    
-    if global_index_order[v]>global_index_order[x]:
-        return tdd.self_copy()
-    
-    if not x in tdd.index_2_key:
-        return tdd.self_copy()
-    
-#     if find_computed_table(['s',tdd,x,c]):
-#         return find_computed_table(['s',tdd,x,c])
-    
-    if v==x:
-        if c==0:
-            weig=tdd.node.out_weight[0]*tdd.weight
-            if get_int_key(weig)==(0,0):
-                term=Find_Or_Add_Unique_table(-1)
-                res=TDD(term)
-                res.weight=0
-            else:
-                res=TDD(tdd.node.successor[0])
-                res.weight=weig
-            res.key_2_index=copy.copy(tdd.key_2_index)
-            res.index_2_key=copy.copy(tdd.index_2_key)
-            res.key_2_index.pop(k)
-            res.index_2_key.pop(x)
-            return res
-        if c==1:
-            weig=tdd.node.out_weight[1]*tdd.weight
-            if get_int_key(weig)==(0,0):
-                term=Find_Or_Add_Unique_table(-1)
-                res=TDD(term)
-                res.weight=0
-            else:
-                res=TDD(tdd.node.successor[1])
-                res.weight=weig
-            res.key_2_index=copy.copy(tdd.key_2_index)
-            res.index_2_key=copy.copy(tdd.index_2_key)
-            res.key_2_index.pop(k)
-            res.index_2_key.pop(x)
-            return res
-        
-
-    leftweight=tdd.node.out_weight[0]*tdd.weight
-    if get_int_key(leftweight)==(0,0):
-        term=Find_Or_Add_Unique_table(-1)
-        leftChild=TDD(term)
-        leftChild.weight=0
-    else:
-        leftChild=TDD(tdd.node.successor[0])
-        leftChild.weight=leftweight
-        
-    rightweight=tdd.node.out_weight[1]*tdd.weight
-    if get_int_key(rightweight)==(0,0):
-        term=Find_Or_Add_Unique_table(-1)
-        rightChild=TDD(term)
-        rightChild.weight=0
-    else:
-        rightChild=TDD(tdd.node.successor[1])
-        rightChild.weight=rightweight 
-
-    low=Slicing(leftChild,x,c)
-    high=Slicing(rightChild,x,c)
-    res=normalize(k,low,high)
-#     insert_2_computed_table(['s',tdd,x,c],res)
-    res.key_2_index=copy.copy(tdd.key_2_index)
-    res.index_2_key=copy.copy(tdd.index_2_key)
-    res.key_2_index.pop(tdd.index_2_key[x])
-    res.index_2_key.pop(x)
-    return res
-    
-def Slicing1(tdd,x,c):
-    """Slice a TDD with respect to x=c"""
-    global global_index_order
-    
-    k=tdd.node.key
-    v=tdd.key_2_index[k]
-    
-    if k==-1:
-        return tdd.self_copy()
-    
-    if global_index_order[v]>global_index_order[x]:
-        return tdd.self_copy()
-    
-    if not x in tdd.index_2_key:
-        return tdd.self_copy()
-    
-    if v==x:
-        if c==0:
-            weig=tdd.node.out_weight[0]
-            if get_int_key(weig)==(0,0):
-                term=Find_Or_Add_Unique_table(-1)
-                res=TDD(term)
-                res.weight=0
-            else:
-                res=TDD(tdd.node.successor[0])
-                res.weight=weig
-            res.key_2_index=tdd.key_2_index
-            res.index_2_key=tdd.index_2_key
-            return res
-        if c==1:
-            weig=tdd.node.out_weight[1]
-            if get_int_key(weig)==(0,0):
-                term=Find_Or_Add_Unique_table(-1)
-                res=TDD(term)
-                res.weight=0
-            else:
-                res=TDD(tdd.node.successor[1])
-                res.weight=weig
-            res.key_2_index=tdd.key_2_index
-            res.index_2_key=tdd.index_2_key
-            return res
-    else:
-        print("Not supported yet!!!")
-        
-def Slicing2(tdd,x,c):
     """Slice a TDD with respect to x=c"""
 
     k=tdd.node.key
@@ -699,7 +579,6 @@ def Slicing2(tdd,x,c):
     else:
         print("Not supported yet!!!")
 
-
 def add(tdd1,tdd2):
     """The apply function of two TDDs. Mostly, it is used to do addition here."""
     global global_index_order    
@@ -707,10 +586,6 @@ def add(tdd1,tdd2):
     k1=tdd1.node.key
     k2=tdd2.node.key
     
-#     print("aaaaaadddddddddd")
-#     print(k1)
-#     print(k2)
-#     print("aaaaaadddddddddd")
     if tdd1.weight==0:
         return tdd2.self_copy()
     
@@ -737,8 +612,8 @@ def add(tdd1,tdd2):
     else:
         x=k2
         
-    low=add(Slicing2(tdd1,x,0),Slicing2(tdd2,x,0))
-    high=add(Slicing2(tdd1,x,1),Slicing2(tdd2,x,1))
+    low=add(Slicing(tdd1,x,0),Slicing(tdd2,x,0))
+    high=add(Slicing(tdd1,x,1),Slicing(tdd2,x,1))
     res = normalize(x,low,high)
     insert_2_computed_table(['+',tdd1,tdd2],res)
     return res
