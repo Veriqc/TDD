@@ -16,7 +16,7 @@ There are three components of our package: TDD, TN, TDD_Q. TDD include the basic
 ### Tensor
 A tensor in TDD can be defined as follows:
 
-    U=1/np.sqrt(2)*np.array([[1,1],[1,-1]])
+    U=np.array([[1,1],[1,-1]])
     var=[Index('x0'),Index('y0')]
     ts1=Tensor(U,var)
     
