@@ -14,3 +14,18 @@ There are three components of our package: TDD, TN, TDD_Q. TDD include the basic
     from TDD.TDD_Q import cir_2_tn,get_real_qubit_num,add_trace_line,add_inputs,add_outputs
   
 ### Tensor
+A tensor in TDD can be defined as follows:
+
+    U=1/np.sqrt(2)*np.array([[1,1],[1,-1]])
+    var=[Index('x0'),Index('y0')]
+    ts1=Tensor(U,var)
+    
+Before using TDD, you need first assign a index order for all the indices:
+
+    Ini_TDD(['x0','y0','x1','y1'])
+    
+Then, you can used following instructions to obtain the TDD and the corresponding graph of the TDD.
+    
+    tdd1=ts1.tdd()
+    tdd1.show()
+    
