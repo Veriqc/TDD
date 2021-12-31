@@ -16,9 +16,9 @@ There are three components of our package: TDD, TN, TDD_Q. TDD include the basic
 ### Tensor
 A tensor in TDD can be defined as follows:
 
-    U=np.array([[1,1],[1,-1]])
-    var=[Index('x0'),Index('y0')]
-    ts1=Tensor(U,var)
+    U = np.array([[1,1],[1,-1]])
+    var = [Index('x0'),Index('y0')]
+    ts1 = Tensor(U,var)
     
 Before using TDD, you need first assign a index order for all the indices:
 
@@ -26,6 +26,20 @@ Before using TDD, you need first assign a index order for all the indices:
     
 Then, you can used following instructions to obtain the TDD and the corresponding graph of the TDD.
     
-    tdd1=ts1.tdd()
+    tdd1 = ts1.tdd()
     tdd1.show()
     
+### Tensor Networks
+A tensor network is defined by a set of tensors:
+
+    var2=[Index('y0'),Index('x1')]
+    ts2=Tensor(U,var2)
+    tn=TensorNetwork([ts1,ts2])
+    
+You can use floowing instructions to obtain the TDD of the tensor network and the corresponding graph.
+
+    tdd=tn.cont()
+    tdd.show()
+
+
+
