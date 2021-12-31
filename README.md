@@ -42,6 +42,22 @@ You can use floowing instructions to obtain the TDD of the tensor network and th
     tdd.show()
 
 ### Quantum Circuits
-TDD_Q
+TDD_Q provide the function for transforming a Qiskit QuantumCircuit as a TensorNetwork.
+
+    path='Benchmarks/'
+    file_name="3_17_13.qasm"
+    cir=QuantumCircuit.from_qasm_file(path+file_name)
+    tn,all_indexs=cir_2_tn(cir)
+    
+You can also add inputs and outputs to this circuit. At present, only computation basis are allowed. Or you can also add the trace line to calculate the trace of the corresponding circuit.
+
+    n=get_real_qubit_num(cir)
+    input_s=[0]*n
+    output_s=[0]*n
+    if input_s:
+        add_inputs(tn,input_s,n)
+    if output_s:
+        add_outputs(tn,output_s,n)
+    # add_trace_line(tn,n)
 
 
