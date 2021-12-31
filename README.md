@@ -41,5 +41,7 @@ You can use floowing instructions to obtain the TDD of the tensor network and th
     tdd=tn.cont()
     tdd.show()
 
+### Quantum Circuits
+TDD_Q
 
 
