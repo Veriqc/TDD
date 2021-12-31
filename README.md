@@ -31,14 +31,15 @@ Then, you can used following instructions to obtain the TDD and the correspondin
     
 ### Tensor Networks
 A tensor network is defined by a set of tensors:
-
-    var2=[Index('y0'),Index('x1')]
-    ts2=Tensor(U,var2)
-    tn=TensorNetwork([ts1,ts2])
+    
+    V = np.array([[1,0],[0,1]])
+    var2 = [Index('y0'),Index('x1')]
+    ts2 = Tensor(V,var2)
+    tn = TensorNetwork([ts1,ts2])
     
 You can use floowing instructions to obtain the TDD of the tensor network and the corresponding graph.
 
-    tdd=tn.cont()
+    tdd = tn.cont()
     tdd.show()
 
 ### Quantum Circuits
@@ -46,14 +47,14 @@ TDD_Q provide the function for transforming a Qiskit QuantumCircuit as a Tensor 
 
     path = 'Benchmarks/'
     file_name = "3_17_13.qasm"
-    cir=QuantumCircuit.from_qasm_file(path+file_name)
+    cir = QuantumCircuit.from_qasm_file(path+file_name)
     tn, all_indexs = cir_2_tn(cir) # all_indexs gives all the indices used in this t=TensorNetwork
     
 You can also add inputs and outputs to this circuit. At present, only computation basis are allowed. Or you can also add the trace line to calculate the trace of the corresponding circuit.
 
-    n=get_real_qubit_num(cir)
-    input_s=[0]*n
-    output_s=[0]*n
+    n = get_real_qubit_num(cir)
+    input_s = [0]*n
+    output_s = [0]*n
     if input_s:
         add_inputs(tn,input_s,n)
     if output_s:
@@ -68,12 +69,12 @@ Then fllowing instructions can be used to obatain the corresponding TDD.
 ### Optimizers
 There are currently three optimizers can be used for contracting a Tensor Network.
 
-    tdd=tn.cont(optimizer='tree_decomposition')
+    tdd = tn.cont(optimizer='tree_decomposition')
 Or, 
 
-    tdd=tn.cont(optimizer='cir_partition1')
+    tdd = tn.cont(optimizer='cir_partition1')
 Or, 
 
-    tdd=tn.cont(optimizer='cir_partition2')
+    tdd = tn.cont(optimizer='cir_partition2')
    
 If you do not assign the optimizer, the TensorNetwork can be contracted as the order of tensors appeared in tn. The optimizer 'tree_decomposition' is build upon networkx, and the optimizer 'cir_partition1' and 'cir_partition2' can only be used when this Tensor Network represent a Quantum Circuit.
