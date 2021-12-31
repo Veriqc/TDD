@@ -42,12 +42,12 @@ You can use floowing instructions to obtain the TDD of the tensor network and th
     tdd.show()
 
 ### Quantum Circuits
-TDD_Q provide the function for transforming a Qiskit QuantumCircuit as a TensorNetwork.
+TDD_Q provide the function for transforming a Qiskit QuantumCircuit as a Tensor Network.
 
-    path='Benchmarks/'
-    file_name="3_17_13.qasm"
+    path = 'Benchmarks/'
+    file_name = "3_17_13.qasm"
     cir=QuantumCircuit.from_qasm_file(path+file_name)
-    tn,all_indexs=cir_2_tn(cir)
+    tn, all_indexs = cir_2_tn(cir) # all_indexs gives all the indices used in this t=TensorNetwork
     
 You can also add inputs and outputs to this circuit. At present, only computation basis are allowed. Or you can also add the trace line to calculate the trace of the corresponding circuit.
 
@@ -59,5 +59,21 @@ You can also add inputs and outputs to this circuit. At present, only computatio
     if output_s:
         add_outputs(tn,output_s,n)
     # add_trace_line(tn,n)
+    
+Then fllowing instructions can be used to obatain the corresponding TDD.
+    Ini_TDD(index_order=all_indexs) # the index_order can be arbitrary assigned.
+    tdd=tn.cont()
+    tdd.show()
+    
+### Optimizers
+There are currently three optimizers can be used for contracting a Tensor Network.
 
+    tdd=tn.cont(optimizer='tree_decomposition')
+Or, 
 
+    tdd=tn.cont(optimizer='cir_partition1')
+Or, 
+
+    tdd=tn.cont(optimizer='cir_partition2')
+   
+If you do not assign the optimizer, the TensorNetwork can be contracted as the order of tensors appeared in tn. The optimizer 'tree_decomposition' is build upon networkx, and the optimizer 'cir_partition1' and 'cir_partition2' can only be used when this Tensor Network represent a Quantum Circuit.
