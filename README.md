@@ -14,7 +14,7 @@ There are three components of our package: TDD, TN, TDD_Q. TDD include the basic
     from TDD.TDD_Q import cir_2_tn,get_real_qubit_num,add_trace_line,add_inputs,add_outputs
   
 ### Tensor
-A tensor in TDD can be defined as follows:
+A tensor in TDD can be defined as follows. Note that there is no need for these tensors to be the shape of (2,2,...), it can be any shape, i.e. (n1,n2,...).
 
     U = np.array([[1,1],[1,-1]])
     var = [Index('x0'),Index('y0')]
