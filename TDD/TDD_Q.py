@@ -117,25 +117,25 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
         tn.tensors.append(ts)
 
 #     print(2)
-#     print(time.time()-t)
-
-#     for k in range(qubits_num):
-#         last1=Index('x'+str(k)+'_'+str(0),0)
-#         new1=Index('x'+str(k),0)
-#         last2=Index('x'+str(k)+'_'+str(qubits_index[k]),hyper_index['x'+str(k)+'_'+str(qubits_index[k])])
-#         new2=Index('y'+str(k),0)
-#         for ts in tn.tensors:
-#             ts.index_set=[new1 if item==last1 else item for item in ts.index_set]
-#             ts.index_set=[new2 if item==last2 else item for item in ts.index_set]
+#     print(time.time()-t)           
 
     for k in range(qubits_num):
-        last1=Index('x'+str(k)+'_'+str(0),0)
-        new1=Index('x'+str(k),0)
-        start_tensors[k].index_set[start_tensors[k].index_set.index(last1)]=new1
-        last2=Index('x'+str(k)+'_'+str(qubits_index[k]),hyper_index['x'+str(k)+'_'+str(qubits_index[k])])
-        new2=Index('y'+str(k),0)
-        end_tensors[k].index_set[end_tensors[k].index_set.index(last2)]=new2
+        if k in start_tensors:
+            last1=Index('x'+str(k)+'_'+str(0),0)
+            new1=Index('x'+str(k),0)            
+            start_tensors[k].index_set[start_tensors[k].index_set.index(last1)]=new1
+        if k in end_tensors:
+            last2=Index('x'+str(k)+'_'+str(qubits_index[k]),hyper_index['x'+str(k)+'_'+str(qubits_index[k])])
+            new2=Index('y'+str(k),0)            
+            end_tensors[k].index_set[end_tensors[k].index_set.index(last2)]=new2
                
+    for k in range(qubits_num):
+        U=np.eye(2)
+        if qubits_index[k]==0 and not 'x'+str(k)+'_'+str(0) in hyper_index:
+            var_in='x'+str(k)
+            var=[Index('x'+str(k),0),Index('y'+str(k),0)]
+            ts=Tensor(U,var,'nu_q',[k])
+            tn.tensors.append(ts)            
 #     print(3)
 #     print(time.time()-t)
     if output_s:

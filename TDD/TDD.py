@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import time
+import random
 from graphviz import Digraph
 from IPython.display import Image
 
@@ -47,6 +48,7 @@ class Node:
         self.succ_num=num
         self.out_weight=[1]*num
         self.successor=[None]*num
+        self.meas_prob=[]
 
 
 class TDD:
@@ -88,9 +90,86 @@ class TDD:
         dot.format = 'png'
         return Image(dot.render('output'))
     
-    def data(self):
-        return tdd_2_np(self)
+    def to_array(self,var=[]):
+        split_pos=0
+        key_repeat_num=dict()
+        var_idx=dict()       
+        if var:
+            for idx in var:
+                if not idx.key in var_idx:
+                    var_idx[idx.key]=1
+                else:
+                    var_idx[idx.key]+=1
+        elif self.index_set:
+            for idx in self.index_set:
+                if not idx.key in var_idx:
+                    var_idx[idx.key]=1
+                else:
+                    var_idx[idx.key]+=1
+        if var:
+            split_pos=len(var_idx)-1
+        elif self.key_2_index:
+            split_pos=max(self.key_2_index)
+        else:
+            split_pos=self.node.key
+        orig_order=[]
+        for k in range(split_pos+1):
+            if k in self.key_2_index:
+                if self.key_2_index[k] in var_idx:
+                    key_repeat_num[k] = var_idx[self.key_2_index[k]]
+            else:
+                key_repeat_num[k]=1
+            if k in self.key_2_index:
+                for k1 in range(key_repeat_num[k]):
+                    orig_order.append(self.key_2_index[k])
+                     
+
+        res = tdd_2_np(self,split_pos,key_repeat_num)
+#         var_order=[]
+#         print(self.index_2_key)
+#         if var and self.index_2_key:
+#             var_order=[idx.key for idx in var]
+#         elif self.index_set and self.index_2_key:
+#             var_order=[idx.key for idx in self.index_set]
+#         print(res.shape)
+#         print(var_order,orig_order)
+        
+#         if var_order:
+#             for k in range(len(var_order)):
+#                 if orig_order[k]!=var_order[k]:
+#                     k1=orig_order.index(var_order[k])
+#                     res=res.swapaxes(k,k1)
+#                     orig_order[k1]=orig_order[k]
+#                 orig_order[k]=0
+
+        return res
+    def measure(self):
+        res=[]
+        get_measure_prob(self)
+        if self.node.key==-1:
+            return ''
+        else:
+            l=random.uniform(0,sum(self.node.meas_prob))
+            if l<self.node.meas_prob[0]:
+                temp_tdd=Slicing(self,self.node.key,0)
+                temp_res=temp_tdd.measure()
+                res='0'+temp_res
+            else:
+                temp_tdd=Slicing(self,self.node.key,1)
+                temp_res=temp_tdd.measure()
+                res='1'+temp_res
+#         print(res)
+        return res
     
+    def sampling(self,k):
+        res=[]
+        for k1 in range(k):
+            temp_res=self.measure()
+            res.append(temp_res )
+        print(res)
+        return res
+        
+        
     def __eq__(self,other):
         if self.node==other.node and get_int_key(self.weight)==get_int_key(other.weight) and self.key_2_index==other.key_2_index:
             return True
@@ -133,6 +212,22 @@ def Ini_TDD(index_order=[]):
     cont_hit_time=0
     set_index_order(index_order)
     return get_identity_tdd()
+
+def Clear_TDD():
+    """To initialize the unique_table,computed_table and set up a global index order"""
+    global computed_table
+    global unique_table
+    global global_node_idx
+    global add_find_time,add_hit_time,cont_find_time,cont_hit_time
+    global_node_idx=0
+    unique_table.clear()
+    computed_table.clear()
+    add_find_time=0
+    add_hit_time=0
+    cont_find_time=0
+    cont_hit_time=0
+    global_node_idx.clear()
+    return 1
 
 def get_identity_tdd():
     node = Find_Or_Add_Unique_table(-1)
@@ -452,17 +547,9 @@ def np_2_tdd2(U,split_pos=None):
     return tdd
     
 def tdd_2_np(tdd,split_pos=None,key_repeat_num=dict()):
-    
+#     print(split_pos,key_repeat_num)
     if split_pos==None:
         split_pos=tdd.node.key
-    if not key_repeat_num:
-        for k in tdd.key_2_index:
-            num=0
-            for idx in tdd.index_set:
-                if idx.key==tdd.key_2_index[k]:
-                    num+=1
-            key_repeat_num[k]=num
-#         print(key_repeat_num)
             
     if split_pos==-1:
         return tdd.weight
@@ -473,48 +560,53 @@ def tdd_2_np(tdd,split_pos=None,key_repeat_num=dict()):
             succ.key_width=tdd.key_width
             temp_res=tdd_2_np(succ,split_pos-1,key_repeat_num)
             the_succs.append(temp_res)
-        if key_repeat_num[split_pos]==1:
-            res=np.stack(tuple(the_succs), axis=split_pos)
+        if not split_pos in key_repeat_num:
+            r = 1
         else:
-            res=[]
-            A=np.zeros(temp_res.shape)
-            B=A.tolist()
-            for k in range(tdd.key_width[split_pos]):
-                res.append(copy.copy(B))
-            for k in range(key_repeat_num[split_pos]-1):
-                res2=[]
-                for k in range(tdd.key_width[split_pos]):
-                    res2.append(copy.copy(res))
-                res=res2                
-            for k in range(tdd.key_width[split_pos]):
-                temp = res
-                for k1 in range(key_repeat_num[split_pos]-1):
-                    temp=temp[k]
-                temp[k]=the_succs[k].tolist()
-            res=np.block(res)
+            r = key_repeat_num[split_pos]
+            
+        if r==1:
+            res=np.stack(tuple(the_succs), axis=the_succs[0].ndim)
+        else:
+            new_shape=list(the_succs[0].shape)
+            for k in range(r):
+                new_shape.append(tdd.key_width[split_pos])
+            res=np.zeros(new_shape)
+            for k1 in range(tdd.key_width[split_pos]):
+                f='res['
+#                 print(the_succs[0].ndim,r-1)
+                for k2 in range(the_succs[0].ndim):
+                    f+=':,'
+                for k3 in range(r-1):
+                    f+=str(k1)+','
+                f=f[:-1]+']'
+                eval(f)[k1]=the_succs[k1]
         return res
     
     
-def tdd_2_np2(tdd,split_pos=None):    
-    if split_pos==None:
-        split_pos=tdd.node.key
-    if split_pos==-1:
-        return tdd.weight
-    else:
-        the_succs=[]
-        for k in range(tdd.key_width[split_pos]):
-            succ=Slicing2(tdd,split_pos,k)
-            succ.key_width=tdd.key_width
-            temp_res=tdd_2_np2(succ,split_pos-1)
-            the_succs.append(temp_res)
-        res=np.stack(tuple(the_succs), axis=split_pos)
-        return res
-    
+def get_measure_prob(tdd):
+    if tdd.node.meas_prob:
+        return tdd
+    if tdd.node.key==-1:
+        tdd.node.meas_prob=[0.5,0.5]
+        return tdd
+    if not tdd.node.succ_num==2:
+        print("Only can be used for binary quantum state")
+        return tdd
+    get_measure_prob(Slicing(tdd,tdd.node.key,0))
+    get_measure_prob(Slicing(tdd,tdd.node.key,1))
+    tdd.node.meas_prob=[0]*2
+    tdd.node.meas_prob[0]=abs(tdd.node.out_weight[0])**2*sum(tdd.node.successor[0].meas_prob)
+    tdd.node.meas_prob[1]=abs(tdd.node.out_weight[1])**2*sum(tdd.node.successor[1].meas_prob)
+    return tdd
+
     
 def cont(tdd1,tdd2):
+
     var_cont=[var for var in tdd1.index_set if var in tdd2.index_set]
     var_out1=[var for var in tdd1.index_set if not var in var_cont]
     var_out2=[var for var in tdd2.index_set if not var in var_cont]
+
     var_out=var_out1+var_out2
     var_out.sort()
     var_out_idx=[var.key for var in var_out]
@@ -556,6 +648,16 @@ def cont(tdd1,tdd2):
     tdd.index_set=var_out
     tdd.index_2_key=idx_2_key
     tdd.key_2_index=key_2_idx
+    key_width=dict()
+    for k1 in range(len(key_2_new_key[0])):
+        if not key_2_new_key[0][k1]=='c' and not key_2_new_key[0][k1] ==-1:
+            key_width[key_2_new_key[0][k1]]=tdd1.key_width[k1]
+    for k2 in range(len(key_2_new_key[1])):
+        if not key_2_new_key[1][k2]=='c' and not key_2_new_key[1][k2] ==-1:
+            key_width[key_2_new_key[1][k2]]=tdd2.key_width[k2]             
+   
+    tdd.key_width=key_width
+#     print(tdd1.key_width,tdd2.key_width,tdd.key_width)
     return tdd
     
 def cont2(tdd1,tdd2,cont_var):
@@ -601,8 +703,17 @@ def cont2(tdd1,tdd2,cont_var):
     cont_order[0].append(float('inf'))
     cont_order[1].append(float('inf'))
 #     print(key_2_new_key,cont_order)
-    return contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num)
-
+    tdd=contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num)
+    key_width=dict()
+    for k1 in range(len(key_2_new_key[0])):
+        if not key_2_new_key[0][k1]=='c' and not key_2_new_key[0][k1] ==-1:
+            key_width[key_2_new_key[0][k1]]=tdd1.key_width[k1]
+    for k2 in range(len(key_2_new_key[1])):
+        if not key_2_new_key[1][k2]=='c' and not key_2_new_key[1][k2] ==-1:
+            key_width[key_2_new_key[1][k2]]=tdd2.key_width[k2]             
+   
+    tdd.key_width=key_width
+    return tdd
 
 def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
