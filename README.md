@@ -62,6 +62,7 @@ You can also add inputs and outputs to this circuit. At present, only computatio
     # add_trace_line(tn,n)
     
 Then fllowing instructions can be used to obatain the corresponding TDD.
+
     Ini_TDD(index_order=all_indexs) # the index_order can be arbitrary assigned.
     tdd=tn.cont()
     tdd.show()
@@ -78,3 +79,14 @@ Or,
     tdd = tn.cont(optimizer='cir_partition2')
    
 If you do not assign the optimizer, the TensorNetwork can be contracted as the order of tensors appeared in tn. The optimizer 'tree_decomposition' is build upon networkx, and the optimizer 'cir_partition1' and 'cir_partition2' can only be used when this Tensor Network represent a Quantum Circuit.
+
+### Equivalence Checking
+To check the equivalence of two quantum circuits or two tensors, you just need to construct the TDDs of these two quantum circuits or tensors using the same index order and then check the equivalence of the two TDDs. Note that, the indices and the index order of the final tensors must be matched. Otherwise, it will do not gives the right answer.
+
+    file_name2 = "3_17_13_2.qasm"
+    cir2 = QuantumCircuit.from_qasm_file(path+file_name2)
+    tn2, all_indexs2 = cir_2_tn(cir2)
+    set_index_order(all_indexs2)
+    tdd2=tn2.cont()
+    print(tdd==tdd2)
+    
