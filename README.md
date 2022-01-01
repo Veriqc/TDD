@@ -87,6 +87,6 @@ To check the equivalence of two quantum circuits or two tensors, you just need t
     cir2 = QuantumCircuit.from_qasm_file(path+file_name2)
     tn2, all_indexs2 = cir_2_tn(cir2)
     set_index_order(all_indexs2) 
-    tdd2=tn2.cont() #Notice that the final indices of tdd2 must match that of tdd
+    tdd2=tn2.cont() # Notice that the final indices of tdd2 must match that of tdd
     print(tdd==tdd2)
     
