@@ -143,35 +143,60 @@ class TDD:
 #                 orig_order[k]=0
 
         return res
-    def measure(self):
+
+    def measure(self,split_pos=None):
         res=[]
         get_measure_prob(self)
-        if self.node.key==-1:
+        if split_pos==None:
+            if self.key_2_index:
+                split_pos=max(self.key_2_index)
+            else:
+                split_pos=self.node.key
+
+        if split_pos==-1:
             return ''
         else:
+            if split_pos!=self.node.key:
+                l=random.randint(0,1)
+                temp_res=self.measure(split_pos-1)
+                res=str(l)+temp_res
+                return res
             l=random.uniform(0,sum(self.node.meas_prob))
             if l<self.node.meas_prob[0]:
                 temp_tdd=Slicing(self,self.node.key,0)
-                temp_res=temp_tdd.measure()
+                temp_res=temp_tdd.measure(split_pos-1)
                 res='0'+temp_res
             else:
                 temp_tdd=Slicing(self,self.node.key,1)
-                temp_res=temp_tdd.measure()
+                temp_res=temp_tdd.measure(split_pos-1)
                 res='1'+temp_res
 #         print(res)
         return res
-    
+    def get_amplitude(self,b):
+        """b is the term for calculating the amplitude"""
+        if len(b)==0:
+            return self.weight
+        
+        if len(b)!=self.node.key+1:
+            b.pop(0)
+            return self.get_amplitude(b)
+        else:
+            temp_tdd=Slicing(self,self.node.key,b[0])
+            b.pop(0)
+            res=temp_tdd.get_amplitude(b)
+            return res*self.weight
+            
     def sampling(self,k):
         res=[]
         for k1 in range(k):
             temp_res=self.measure()
             res.append(temp_res )
-        print(res)
+#         print(res)
         return res
         
         
     def __eq__(self,other):
-        if self.node==other.node and get_int_key(self.weight)==get_int_key(other.weight) and self.key_2_index==other.key_2_index:
+        if self.node==other.node and get_int_key(self.weight)==get_int_key(other.weight):# and self.key_2_index==other.key_2_index
             return True
         else:
             return False
@@ -226,8 +251,8 @@ def Clear_TDD():
     add_hit_time=0
     cont_find_time=0
     cont_hit_time=0
-    global_node_idx.clear()
-    return 1
+    global_node_idx=0
+
 
 def get_identity_tdd():
     node = Find_Or_Add_Unique_table(-1)
@@ -312,25 +337,30 @@ def normalize(x,the_successors):
     
     weigs=[succ.weight for succ in the_successors]
 
-    all_zeros=True
-    for k in range(len(the_successors)):
-        if get_int_key(weigs[k])!=(0,0):
-            all_zeros=False
-            break
-    if all_zeros:
-        node=Find_Or_Add_Unique_table(-1)
-        res=TDD(node)
-        res.weight=0
-        return res
-    for k in range(len(the_successors)):
-        if get_int_key(weigs[k])==(0,0):
-            node=Find_Or_Add_Unique_table(-1)
-            the_successors[k]=TDD(node)
-            the_successors[k].weight=weigs[k]=0
+#     all_zeros=True
+#     for k in range(len(the_successors)):
+#         if get_int_key(weigs[k])!=(0,0):
+#             all_zeros=False
+#             break
+#     if all_zeros:
+#         node=Find_Or_Add_Unique_table(-1)
+#         res=TDD(node)
+#         res.weight=0
+#         return res
+#     for k in range(len(the_successors)):
+#         if get_int_key(weigs[k])==(0,0):
+#             node=Find_Or_Add_Unique_table(-1)
+#             the_successors[k]=TDD(node)
+#             the_successors[k].weight=weigs[k]=0
     
     weigs_abs=[np.around(abs(weig)/epi) for weig in weigs]
     weig_max=weigs[weigs_abs.index(max(weigs_abs))]
     weigs=[weig/weig_max for weig in weigs]
+    for k in range(len(the_successors)):
+        if get_int_key(weigs[k])==(0,0):
+            node=Find_Or_Add_Unique_table(-1)
+            the_successors[k]=TDD(node)
+            the_successors[k].weight=weigs[k]=0    
     succ_nodes=[succ.node for succ in the_successors]
     node=Find_Or_Add_Unique_table(x,weigs,succ_nodes)
     res=TDD(node)
@@ -596,8 +626,8 @@ def get_measure_prob(tdd):
     get_measure_prob(Slicing(tdd,tdd.node.key,0))
     get_measure_prob(Slicing(tdd,tdd.node.key,1))
     tdd.node.meas_prob=[0]*2
-    tdd.node.meas_prob[0]=abs(tdd.node.out_weight[0])**2*sum(tdd.node.successor[0].meas_prob)
-    tdd.node.meas_prob[1]=abs(tdd.node.out_weight[1])**2*sum(tdd.node.successor[1].meas_prob)
+    tdd.node.meas_prob[0]=abs(tdd.node.out_weight[0])**2*sum(tdd.node.successor[0].meas_prob)*2**(tdd.node.key-tdd.node.successor[0].key)
+    tdd.node.meas_prob[1]=abs(tdd.node.out_weight[1])**2*sum(tdd.node.successor[1].meas_prob)*2**(tdd.node.key-tdd.node.successor[1].key)
     return tdd
 
     
