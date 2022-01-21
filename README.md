@@ -57,8 +57,8 @@ You can also add inputs and outputs to this circuit. At present, only computatio
     output_s = [0]*n
     if input_s:
         add_inputs(tn,input_s,n)
-    if output_s:
-        add_outputs(tn,output_s,n)
+    #if output_s:
+    #    add_outputs(tn,output_s,n)
     # add_trace_line(tn,n)
     
 Then fllowing instructions can be used to obatain the corresponding TDD.
@@ -66,6 +66,12 @@ Then fllowing instructions can be used to obatain the corresponding TDD.
     Ini_TDD(index_order=all_indexs) # the index_order can be arbitrary assigned.
     tdd=tn.cont()
     tdd.show()
+
+If the final TDD represent a quantum state, you can use the following instructions to obtain a measurement result or do sampling or obtain an amplitude.
+    
+    print(tdd.measure())
+    print(tdd.sampling(10))
+    print(tdd.get_amplitude([0]*n))
     
 ### Optimizers
 There are currently three optimizers can be used for contracting a Tensor Network.
