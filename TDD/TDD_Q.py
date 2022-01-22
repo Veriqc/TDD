@@ -1,6 +1,5 @@
 import numpy as np
 from TDD.TN import Index,Tensor,TensorNetwork
-from qiskit.quantum_info.operators import Operator
 import time
 
 def is_diagonal(U):
@@ -90,7 +89,7 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
             qubits_index[q[1]]+=1            
             continue
         ts=Tensor([],[],nam,q)
-        U=Operator(g[0]).data
+        U = g[0].to_matrix()
         if is_diagonal(U):
             for k in q:
                 var_in='x'+ str(k)+'_'+str(qubits_index[k])
