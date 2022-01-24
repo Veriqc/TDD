@@ -42,7 +42,7 @@ def cir_2_tn(cir):
     start_tensors= dict()
     end_tensors = dict()
     
-    qubits_num=get_real_qubit_num(cir)
+    qubits_num=get_real_qubit_num(cir)  #import all circuit data
 
     for k in range(qubits_num):
         qubits_index[k]=0
@@ -51,9 +51,9 @@ def cir_2_tn(cir):
        
     gates=cir.data
     for k in range(len(gates)):
-        g=gates[k]
-        nam=g[0].name
-        q = [q.index for q in g[1]]
+        g=gates[k] #kth qubit.
+        nam=g[0].name  #gate name.
+        q = [q.index for q in g[1]]  #Which qubit operate the gate.
         var=[]
         if nam=='cx':
 #             print(Operator(g[0]).data)
@@ -76,7 +76,7 @@ def cir_2_tn(cir):
             qubits_index[q[1]]+=1            
             continue
         ts=Tensor([],[],nam,q)
-        U = g[0].to_matrix()
+        U = g[0].to_matrix() #get the gate matrix
         if is_diagonal(U):
             for k in q:
                 var_in='x'+ str(k)+'_'+str(qubits_index[k])
