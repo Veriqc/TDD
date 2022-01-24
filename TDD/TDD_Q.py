@@ -31,7 +31,7 @@ def get_real_qubit_num(cir):
         q=max(q,max([qbit.index for qbit in gates[k][1]]))
     return q+1
 
-def cir_2_tn(cir,input_s=[],output_s=[]):
+def cir_2_tn(cir):
     """return the dict that link every quantum gate to the corresponding index"""
 #     print(1)
 #     t=time.time()
@@ -48,20 +48,7 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
         qubits_index[k]=0
         
     tn=TensorNetwork([],tn_type='cir',qubits_num=qubits_num)
-
-        
-    if input_s:
-        U0=np.array([1,0])
-        U1=np.array([0,1])
-        for k in range(qubits_num):
-            if input_s[k]==0:
-                ts=Tensor(U0,[Index('x'+str(k))],'in',[k])
-            elif input_s[k]==1:
-                ts=Tensor(U1,[Index('x'+str(k))],'in',[k])
-            else:
-                print('Only support computational basis input')
-            tn.tensors.append(ts)
-                
+       
     gates=cir.data
     for k in range(len(gates)):
         g=gates[k]
@@ -137,17 +124,7 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
             tn.tensors.append(ts)            
 #     print(3)
 #     print(time.time()-t)
-    if output_s:
-        U0=np.array([1,0])
-        U1=np.array([0,1])
-        for k in range(qubits_num):
-            if input_s[k]==0:
-                ts=Tensor(U0,[Index('y'+str(k))],'out',[k])
-            elif input_s[k]==1:
-                ts=Tensor(U1,[Index('y'+str(k))],'out',[k])
-            else:
-                print('Only support computational basis output')
-            tn.tensors.append(ts)
+
     
     all_indexs=[]
     for k in range(qubits_num):
