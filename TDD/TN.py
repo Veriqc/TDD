@@ -2,6 +2,7 @@ import numpy as np
 from TDD.TDD import Index,get_tdd,get_identity_tdd,cont
 import networkx as nx
 from networkx.algorithms.approximation.treewidth import treewidth_min_degree,treewidth_min_fill_in
+import tensornetwork as tn
 
 common_tensor_table = dict()
 
@@ -84,6 +85,33 @@ class TensorNetwork:
                 if not idx in self.index_2_tensor:
                     self.index_2_tensor[idx]=set()
                 self.index_2_tensor[idx].add(ts)
+
+    def show(self, num_qubits):
+        all_nodes_list = []
+        states = []
+        # initialize all qubit nodes (input states)
+        for i in range(num_qubits):
+            node = tn.Node(np.array([1.0+0.0j, 0.0+0.0j]))
+            state = node[0]
+            node.set_name("q" + str(i))
+            states.append(state)
+            all_nodes_list.append(node)
+        for state in states:
+            print(state)
+        for tensor_node in self.tensors:
+            gate = tn.Node(tensor_node.data, tensor_node.name)
+            all_nodes_list.append(gate)
+            print("gate", gate.name)
+            # connect gate's input edges
+            for i, qubit in enumerate(tensor_node.qubits):
+                print("Connect", states[qubit], "and", gate[i], "as", tensor_node.index_set[2*i].key)
+                # We now only show Index.key, still not handle hyperedge Index.idx
+                tn.connect(states[qubit], gate[2*i], str(tensor_node.index_set[2*i].key))
+                # reserve gate's output edges
+                gate[2*i+1].set_name(str(tensor_node.index_set[2*i+1].key))
+                states[qubit] = gate[2*i+1]
+        return tn.to_graphviz(all_nodes_list, None, False)
+
 
     
 #     def get_index_2_node(self):
