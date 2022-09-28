@@ -13,7 +13,7 @@ def add_hyper_index(var_list,hyper_index):
             hyper_index[var]=0
             
 def reshape(U):
-    if U.shape==(2,2):
+    if U.shape==(1,1):
         return U
     
     if U.shape[0]==U.shape[1]:
