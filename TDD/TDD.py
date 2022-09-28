@@ -262,10 +262,10 @@ def get_identity_tdd():
     return tdd
 
 def get_unique_table():
-    return global_unique_table
+    return unique_table
 
 def get_unique_table_num():
-    return len(global_unique_table)
+    return len(unique_table)
 
 def set_index_order(var_order):
     global global_index_order
@@ -452,6 +452,7 @@ def get_tdd(U,var=[]):
     order=[]
     for idx in var:
         order.append(idx_2_key[idx.key])
+        
     tdd = np_2_tdd(U,order)
     tdd.index_2_key=idx_2_key
     tdd.key_2_index=key_2_idx
@@ -533,7 +534,7 @@ def np_2_tdd(U,order=[],key_width=True):
     split_pos=order.index(x)
     order[split_pos]=-1
     split_U=np.split(U,U_shape[split_pos],split_pos)
-
+    
     while x in order:
         split_pos=order.index(x)
         for k in range(len(split_U)):
