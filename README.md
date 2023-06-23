@@ -1,10 +1,10 @@
 # A-Tensor-Network-Based-Decision-Diagram
 ## Overview
-Decision diagrams have been used in simulation and equivalence checking of quantum circuits. Inspired by the efficienvy and flexibility of Tensor Networks. A tensor network-based decision diagram has been proposed in https://arxiv.org/abs/2009.02618. This repository gives a proof-of-concept implementation of the Tensor Decision Diagram(TDD) using Python3. 
-Part of the benchmarks are coming from https://github.com/iic-jku/qmap/tree/master/examples.
+Decision diagrams have been used in the simulation and equivalence checking of quantum circuits. Inspired by the efficiency and flexibility of Tensor Networks. A tensor network-based decision diagram has been proposed at https://arxiv.org/abs/2009.02618. This repository gives a proof-of-concept implementation of the Tensor Decision Diagram(TDD) using Python3. 
+Part of the benchmarks is coming from https://github.com/iic-jku/qmap/tree/master/examples.
 
 ## Dependencies
-In order to use this package, you are expected to first install the fllowing packages: numpy, networkx, qiskit and graphviz. The data type of numpy is used to defined the data of a tensor in our package. Networkx will be used as part of a optimizer in this package. Qiskit is used for coping with Quantum Circuits and Graphviz is used for showing the graph of a TDD.
+In order to use this package, you are expected first to install the following packages: numpy, networkx, qiskit and graphviz. The data type of numpy is used to define the data of a tensor in our package. Networkx will be used as part of an optimizer in this package. Qiskit is used for coping with Quantum Circuits, and Graphviz is used for showing the graph of a TDD.
 
 ## Usage
 There are three components of our package: TDD, TN, TDD_Q. TDD include the basic structure and operations of the tensor decision diagram. TN contains the basic definitions and operations of Tensor and Tensor Network. TDD_Q is used for coping with Quantum Circuits.
@@ -20,11 +20,11 @@ A tensor in TDD can be defined as follows. Note that there is no need for these 
     var = [Index('x0'),Index('y0')]
     ts1 = Tensor(U,var)
     
-Before using TDD, you need first assign a index order for all the indices:
+Before using TDD, you need first assign an index order for all the indices:
 
     Ini_TDD(['x0','y0','x1','y1'])
     
-Then, you can used following instructions to obtain the TDD and the corresponding graph of the TDD.
+Then, you can use the following instructions to obtain the TDD and the corresponding graph of the TDD.
     
     tdd1 = ts1.tdd()
     tdd1.show()
@@ -37,7 +37,7 @@ A tensor network is defined by a set of tensors:
     ts2 = Tensor(V,var2)
     tn = TensorNetwork([ts1,ts2])
     
-You can use floowing instructions to obtain the TDD of the tensor network and the corresponding graph.
+You can use the following instructions to obtain the TDD of the tensor network and the corresponding graph.
 
     tdd = tn.cont()
     tdd.show()
@@ -61,9 +61,9 @@ You can also add inputs and outputs to this circuit. At present, only computatio
     #    add_outputs(tn,output_s,n)
     # add_trace_line(tn,n)
     
-Then fllowing instructions can be used to obatain the corresponding TDD.
+Then following instructions can be used to obtain the corresponding TDD.
 
-    Ini_TDD(index_order=all_indexs) # the index_order can be arbitrary assigned.
+    Ini_TDD(index_order=all_indexs) # the index_order can be arbitrarily assigned.
     tdd=tn.cont()
     tdd.show()
 
@@ -74,7 +74,7 @@ If the final TDD represent a quantum state, you can use the following instructio
     print(tdd.get_amplitude([0]*n))
     
 ### Optimizers
-There are currently three optimizers can be used for contracting a Tensor Network.
+There are currently three optimizers that can be used for contracting a Tensor Network.
 
     tdd = tn.cont(optimizer='tree_decomposition')
 Or, 
@@ -84,10 +84,10 @@ Or,
 
     tdd = tn.cont(optimizer='cir_partition2')
    
-If you do not assign the optimizer, the TensorNetwork can be contracted as the order of tensors appeared in tn. The optimizer 'tree_decomposition' is build upon networkx, and the optimizer 'cir_partition1' and 'cir_partition2' can only be used when this Tensor Network represent a Quantum Circuit.
+If you do not assign the optimizer, the TensorNetwork can be contracted as the order of tensors appeared in tn. The optimizer 'tree_decomposition' is built upon networkx, and the optimizer 'cir_partition1' and 'cir_partition2' can only be used when this Tensor Network represents a Quantum Circuit.
 
 ### Equivalence Checking
-To check the equivalence of two quantum circuits or two tensors, you just need to construct the TDDs of these two quantum circuits or tensors using the same index order and then check the equivalence of the two TDDs. Note that, the indices and the index order of the final tensors must be matched. Otherwise, it will do not gives the right answer.
+To check the equivalence of two quantum circuits or two tensors, you need to construct the TDDs of these two quantum circuits or tensors using the same index order and then check the equivalence of the two TDDs. Note that the indices and the index order of the final tensors must be matched. Otherwise, it will do not gives the right answer.
 
     file_name2 = "3_17_13_2.qasm"
     cir2 = QuantumCircuit.from_qasm_file(path+file_name2)
