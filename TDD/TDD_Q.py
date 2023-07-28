@@ -169,10 +169,14 @@ def add_inputs(tn,input_s,qubits_num):
         print("inputs is not match qubits number")
         return 
     for k in range(qubits_num-1,-1,-1):
-        if input_s[k]==0:
+        if input_s[k]==0 or input_s[k]=='0':
             ts=Tensor(U0,[Index('x'+str(k))],'in',[k])
-        elif input_s[k]==1:
+        elif input_s[k]==1 or input_s[k]=='1':
             ts=Tensor(U1,[Index('x'+str(k))],'in',[k])
+        elif input_s[k]=='+':
+            ts=Tensor(U_p,[Index('x'+str(k))],'in',[k]) 
+        elif input_s[k]=='-':
+            ts=Tensor(U_m,[Index('x'+str(k))],'in',[k])               
         else:
             print('Only support computational basis input')
         tn.tensors.insert(0,ts)
@@ -180,14 +184,20 @@ def add_inputs(tn,input_s,qubits_num):
 def add_outputs(tn,output_s,qubits_num):
     U0=np.array([1,0])
     U1=np.array([0,1])
+    U_p=1/np.sqrt(2)*np.array([1,1])
+    U_m=1/np.sqrt(2)*np.array([1,-1])
     if len(output_s)!= qubits_num:
         print("outputs is not match qubits number")
         return 
     for k in range(qubits_num):
-        if output_s[k]==0:
+        if output_s[k]==0 or output_s[k]=='0':
             ts=Tensor(U0,[Index('y'+str(k))],'out',[k])
-        elif output_s[k]==1:
+        elif output_s[k]==1 or output_s[k]=='1':
             ts=Tensor(U1,[Index('y'+str(k))],'out',[k])
+        elif output_s[k]=='+':
+            ts=Tensor(U_p,[Index('y'+str(k))],'out',[k])
+        elif output_s[k]=='-':
+            ts=Tensor(U_m,[Index('y'+str(k))],'out',[k])            
         else:
             print('Only support computational basis output')
         tn.tensors.append(ts)       
@@ -200,131 +210,80 @@ def add_trace_line(tn,qubits_num):
         ts=Tensor(U,var,'tr',[k])
         tn.tensors.insert(0,ts)
         
-# def Single_qubit_gate_2TDD(U,var):
-#     """Get the TDD of a 2*2 matrix, here var = [column index, row index]"""
-#     idx_2_key={-1:-1}
-#     key_2_idx={-1:-1}
-#     if var[0]<var[1]:
-#         idx_2_key[var[0].key]=1
-#         idx_2_key[var[1].key]=0
-#         key_2_idx[0]=var[1].key
-#         key_2_idx[1]=var[0].key
-#     else:
-#         idx_2_key[var[0].key]=0
-#         idx_2_key[var[1].key]=1
-#         key_2_idx[0]=var[0].key
-#         key_2_idx[1]=var[1].key 
-    
-#     res=get_tdd(U,[var[1],var[0]],idx_2_key) 
-#     res.index_set=var
-#     res.index_2_key=idx_2_key
-#     res.key_2_index=key_2_idx
-#     return res 
-
-# def diag_matrix_2_TDD(U,var):
-#     term=Find_Or_Add_Unique_table(-1)
-#     if get_int_key(U[0][0])==get_int_key(U[1][1]):
-#         res=TDD(term)
-#         res.weight=U[0][0]
-#     else:
-#         low=TDD(term)
-#         low.weight=U[0][0]
-#         high=TDD(term)
-#         high.weight=U[1][1]
-#         res=normalize(0, [low, high])
-#     res.index_set=var
-#     res.index_2_key={-1:-1,var[0].key:0}
-#     res.key_2_index={-1:-1,0:var[0].key}
-#     res.key_width[0]=2
-#     return res
-
-# def diag_matrix_2_TDD2(U,var):
-#     if var[0]<var[2]:
-#         x1=var[0].key
-#         x0=var[2].key
-#         low = diag_matrix_2_TDD(U[:2,:2],var[2:])
-#         high = diag_matrix_2_TDD(U[2:,2:],var[2:])          
-#     else:
-#         x1=var[2].key
-#         x0=var[0].key
-#         low = diag_matrix_2_TDD(np.diag([U[0][0],U[2,2]]),var[:2])
-#         high = diag_matrix_2_TDD(np.diag([U[1][1],U[3,3]]),var[:2])
-       
-    
-#     if low==high:
-#         res=low
-#     else:
-#         res=normalize(1,[low,high])
+def simulate(cir,state=[]):
+    tn,all_indexs=cir_2_tn(cir)
+    n=get_real_qubit_num(cir)
+    U0=np.array([1,0])
+    U1=np.array([0,1])
+    U_p=1/np.sqrt(2)*np.array([1,1])
+    U_m=1/np.sqrt(2)*np.array([1,-1])
+    if len(state)==n:
+        for k in range(n-1,-1,-1):
+            if state[k]=='0' or state[k]==0:
+                ts=Tensor(U0,[Index('x'+str(k))],'in',[k])
+            elif state[k]=='1' or state[k]==1:
+                ts=Tensor(U1,[Index('x'+str(k))],'in',[k])
+            elif state[k]=='+':
+                ts=Tensor(U_p,[Index('x'+str(k))],'in',[k])
+            elif state[k]=='-':
+                ts=Tensor(U_m,[Index('x'+str(k))],'in',[k])            
+            else:
+                print('Only support computational basis input')
+            tn.tensors.insert(0,ts)
+    Ini_TDD(index_order=all_indexs)
+    tdd=tn.cont(optimizer=None)
+    return tdd        
         
-#     res.index_set=var
-#     res.index_2_key={-1:-1,x0:0,x1:1}
-#     res.key_2_index={-1:-1,0:x0,1:x1}
-#     res.key_width[0]=res.key_width[1]=2
-#     return res
+def equivalence_checker(cir1,cir2):
+    """return True iff cir1 is equivalent to cir2"""
+    tn,all_indexs=cir_2_tn(cir1)
+    Ini_TDD(index_order=all_indexs)
+    tdd1=tn.cont(optimizer='tree_decomposition')
+    tn2,all_indexs2=cir_2_tn(cir2)
+    set_index_order(all_indexs2)
+    tdd2=tn2.cont(optimizer='tree_decomposition')
+    return tdd1==tdd2,tdd1,tdd2
 
-
-# def cnot_2_TDD(var,case=1):
+def save_cir(cir,path='test.qasm'):
+    with open(path,'w') as f:
+        f.write(cir.qasm())
+        
+def gen_cir(name=None,qubit_num = 1,gate_num = 1, save = False,path='test.qasm'):
+    from qiskit import QuantumCircuit
+    import random
+    cir=QuantumCircuit(qubit_num)
     
-#     if case==2:
-#         term=Find_Or_Add_Unique_table(-1)
-#         res=TDD(term)
-#         res.index_set = [var[0],var[1],var[2]]
-#         res.index_2_key={-1:-1,var[0].key:0}
-#         res.key_2_index={-1:-1,0:var[0].key}
-#         return res
-#     XOR=np.zeros((2,2,2))
-#     XOR[0][0][0]=XOR[0][1][1]=XOR[1][0][1]=XOR[1][1][0]=1
+    if name=='Random_Clifford':
+        gate_set = ['x','y','z','h','s','cx']
+        
+        for k in range(gate_num):
+            g = gate_set[random.randint(0,len(gate_set)-1)]
+            q = random.randint(0,qubit_num-1)
+            if g=='cx':
+                q2 = random.randint(0,qubit_num-1)
+                while q2==q:
+                    q2 = random.randint(0,qubit_num-1)
+                eval('cir.'+g+str(tuple([q,q2])))
+            else:
+                eval('cir.'+g+str(tuple([q])))
+        if save:
+            save_cir(cir,path)
+                
+        return cir
     
-#     idx_2_key={-1:-1}
-#     key_2_idx={-1:-1}
-    
-#     new_var=[var[0],var[3],var[4]]
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=0
-#     key_2_idx[0]=max_var.key
-#     new_var.remove(max_var)
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=1
-#     key_2_idx[1]=max_var.key
-#     new_var.remove(max_var)
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=2
-#     key_2_idx[2]=max_var.key
-#     res=get_tdd(XOR,[var[0],var[3],var[4]],idx_2_key)
-#     res.index_2_key=idx_2_key
-#     res.key_2_index=key_2_idx
-#     if case==1:
-#         res.index_set=[var[0],var[2],var[3],var[4]]
-#     else:
-#         res.index_set=[var[1],var[3],var[4]]
-#     res.key_width[0]=res.key_width[1]=res.key_width[2]=2
-#     return res
-
-# def Two_qubit_gate_2TDD(U,var):
-#     """Get the TDD of a 2*2 matrix, here var = [column index, row index]"""
-#     U=U.reshape(2,2,2,2)
-#     idx_2_key={-1:-1}
-#     key_2_idx={-1:-1}
-    
-#     new_var=[var[0],var[1],var[2],var[3]]
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=0
-#     key_2_idx[0]=max_var.key
-#     new_var.remove(max_var)
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=1
-#     key_2_idx[1]=max_var.key
-#     new_var.remove(max_var)
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=2
-#     key_2_idx[2]=max_var.key
-#     new_var.remove(max_var)
-#     max_var=max(new_var)
-#     idx_2_key[max_var.key]=3
-#     key_2_idx[3]=max_var.key
-#     res=get_tdd(U,[var[3],var[1],var[2],var[0]],idx_2_key) 
-#     res.index_2_key=idx_2_key
-#     res.key_2_index=key_2_idx
-#     res.index_set=[var[0],var[1],var[2],var[3]]
-#     res.key_width[0]=res.key_width[1]=res.key_width[2]=res.key_width[3]=2
-#     return res
+    if name=='Random_Clifford_T':
+        gate_set = ['x','y','z','h','s','cx','t']
+        
+        for k in range(gate_num):
+            g = gate_set[random.randint(0,len(gate_set)-1)]
+            q = random.randint(0,qubit_num-1)
+            if g=='cx':
+                q2 = random.randint(0,qubit_num-1)
+                while q2==q:
+                    q2 = random.randint(0,qubit_num-1)
+                eval('cir.'+g+str(tuple([q,q2])))
+            else:
+                eval('cir.'+g+str(tuple([q])))
+        if save:
+            save_cir(cir,path)                
+        return cir
