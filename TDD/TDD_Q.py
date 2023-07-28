@@ -112,9 +112,7 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
                 qubits_index[k]+=1
         if len(q)>1:
             U=reshape(U)
-        if len(q)==1:
-            U=U.T
-        ts.data=U
+        ts.data=U.T
         ts.index_set=var
         tn.tensors.append(ts)
 
@@ -169,14 +167,10 @@ def add_inputs(tn,input_s,qubits_num):
         print("inputs is not match qubits number")
         return 
     for k in range(qubits_num-1,-1,-1):
-        if input_s[k]==0 or input_s[k]=='0':
+        if input_s[k]==0:
             ts=Tensor(U0,[Index('x'+str(k))],'in',[k])
-        elif input_s[k]==1 or input_s[k]=='1':
+        elif input_s[k]==1:
             ts=Tensor(U1,[Index('x'+str(k))],'in',[k])
-        elif input_s[k]=='+':
-            ts=Tensor(U_p,[Index('x'+str(k))],'in',[k]) 
-        elif input_s[k]=='-':
-            ts=Tensor(U_m,[Index('x'+str(k))],'in',[k])               
         else:
             print('Only support computational basis input')
         tn.tensors.insert(0,ts)
@@ -184,20 +178,14 @@ def add_inputs(tn,input_s,qubits_num):
 def add_outputs(tn,output_s,qubits_num):
     U0=np.array([1,0])
     U1=np.array([0,1])
-    U_p=1/np.sqrt(2)*np.array([1,1])
-    U_m=1/np.sqrt(2)*np.array([1,-1])
     if len(output_s)!= qubits_num:
         print("outputs is not match qubits number")
         return 
     for k in range(qubits_num):
-        if output_s[k]==0 or output_s[k]=='0':
+        if output_s[k]==0:
             ts=Tensor(U0,[Index('y'+str(k))],'out',[k])
-        elif output_s[k]==1 or output_s[k]=='1':
+        elif output_s[k]==1:
             ts=Tensor(U1,[Index('y'+str(k))],'out',[k])
-        elif output_s[k]=='+':
-            ts=Tensor(U_p,[Index('y'+str(k))],'out',[k])
-        elif output_s[k]=='-':
-            ts=Tensor(U_m,[Index('y'+str(k))],'out',[k])            
         else:
             print('Only support computational basis output')
         tn.tensors.append(ts)       
@@ -210,40 +198,7 @@ def add_trace_line(tn,qubits_num):
         ts=Tensor(U,var,'tr',[k])
         tn.tensors.insert(0,ts)
         
-def simulate(cir,state=[]):
-    tn,all_indexs=cir_2_tn(cir)
-    n=get_real_qubit_num(cir)
-    U0=np.array([1,0])
-    U1=np.array([0,1])
-    U_p=1/np.sqrt(2)*np.array([1,1])
-    U_m=1/np.sqrt(2)*np.array([1,-1])
-    if len(state)==n:
-        for k in range(n-1,-1,-1):
-            if state[k]=='0' or state[k]==0:
-                ts=Tensor(U0,[Index('x'+str(k))],'in',[k])
-            elif state[k]=='1' or state[k]==1:
-                ts=Tensor(U1,[Index('x'+str(k))],'in',[k])
-            elif state[k]=='+':
-                ts=Tensor(U_p,[Index('x'+str(k))],'in',[k])
-            elif state[k]=='-':
-                ts=Tensor(U_m,[Index('x'+str(k))],'in',[k])            
-            else:
-                print('Only support computational basis input')
-            tn.tensors.insert(0,ts)
-    Ini_TDD(index_order=all_indexs)
-    tdd=tn.cont(optimizer=None)
-    return tdd        
         
-def equivalence_checker(cir1,cir2):
-    """return True iff cir1 is equivalent to cir2"""
-    tn,all_indexs=cir_2_tn(cir1)
-    Ini_TDD(index_order=all_indexs)
-    tdd1=tn.cont(optimizer='tree_decomposition')
-    tn2,all_indexs2=cir_2_tn(cir2)
-    set_index_order(all_indexs2)
-    tdd2=tn2.cont(optimizer='tree_decomposition')
-    return tdd1==tdd2,tdd1,tdd2
-
 def save_cir(cir,path='test.qasm'):
     with open(path,'w') as f:
         f.write(cir.qasm())

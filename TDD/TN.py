@@ -48,7 +48,7 @@ class TensorNetwork:
                 temp_tn=TensorNetwork(partion_cir[level][0])
                 tdd1=temp_tn.cont()
                 temp_tn=TensorNetwork(partion_cir[level][1])
-                tdd2=temp_tn.cont()
+                tdd2=temp_tn.cont()              
                 temp_tdd=cont(tdd1,tdd2)
                 tdd=cont(tdd,temp_tdd)
             return tdd

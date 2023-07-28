@@ -14,54 +14,62 @@ add_hit_time=0
 cont_find_time=0
 cont_hit_time=0
 add_hit_time2=0
-add_times = 0
-cont_times = 0
 # epi=1e-5
 
 terminal_node = None
 
 class Index:
-    """The index in the form (name,hyper_idx), here name is expected to be a string, hyper_idx is used to cope with hyper index"""
-    def __init__(self, name ,hyper_idx=0):
-        self.name = name
-        self.hyper_idx = hyper_idx
+    """The index, here idx is used when there is a hyperedge"""
+    def __init__(self,key,idx=0):
+        self.key = key
+        self.idx = idx
         
     def __eq__(self,other):
-        if self.name == other.name and self.hyper_idx == other.hyper_idx:
+        if self.key == other.key and self.idx == other.idx:
             return True
         else:
             return False
         
     def __lt__(self,other):
-        if global_index_order[self.name] < global_index_order[other.name]:
+        if global_index_order[self.key] < global_index_order[other.key]:
             return True
-        elif self.name == other.name and self.hyper_idx<other.hyper_idx:
+        elif self.key == other.key and self.idx<other.idx:
             return True
         
         return False
     
     def __str__(self):
-        return str((self.name,self.hyper_idx))
+        return str((self.key,self.idx))
 
     
 class Node:
     """To define the node of TDD"""
     def __init__(self,key,num=2):
+        self.idx = 0
         self.key = key
-        self.succ_num = num
-        self.id = None
-        self.out_weight = None #suppose to be a list of length num
-        self.succ = None #suppose to be a list of length num
-        self.ref_num = None
+        self.succ_num=num
+        self.out_weight=[None]*num
+        self.successor=[None]*num
+        self.meas_prob=[]
+        self.ref_num = 0
+        self.is_key_node=False
 
 
 class TDD:
     def __init__(self,node,weight=cn1):
         """TDD"""
         self.weight = weight
-        self.node = node
-        self.index_set = None #suppose to be a list or set
-        self.key_2_index = None #suppose to be a dict
+#         print(weight,id(weight),id(cn0),id(cn1))
+        self.index_set=[]
+        
+        self.key_2_index=dict()
+        self.index_2_key=dict()
+        self.key_width=dict() #Only used when change TDD to numpy
+        
+        if isinstance(node,Node):
+            self.node=node
+        else:
+            self.node=Node(node)
             
             
     def node_number(self):
@@ -74,18 +82,19 @@ class TDD:
         temp.weight = self.weight
         temp.index_set = copy.copy(self.index_set)
         temp.key_2_index=copy.copy(self.key_2_index)
+        temp.index_2_key=copy.copy(self.index_2_key)
         return temp
     
-    def show(self,real_label=True,name='output'):
+    def show(self,real_label=True):
         from graphviz import Digraph
         from IPython.display import Image
         edge=[]              
         dot=Digraph(name='reduced_tree')
         dot=layout(self.node,self.key_2_index,dot,edge,real_label)
         dot.node('-0','',shape='none')
-        dot.edge('-0',str(self.node.id),color="blue",label=str(complex(round(self.weight.r.val,2),round(self.weight.i.val,2))))
+        dot.edge('-0',str(self.node.idx),color="blue",label=str(complex(round(self.weight.r.val,2),round(self.weight.i.val,2))))
         dot.format = 'png'
-        return Image(dot.render(name))
+        return Image(dot.render('output'))
     
     def to_array(self,var=[]):
         split_pos=0
@@ -187,48 +196,48 @@ def layout(node,key_2_idx,dot=None,succ=[],real_label=True):
     col=['red','blue','black','green']
     if real_label and node.key in key_2_idx:
         if node.key==-1:
-            dot.node(str(node.id), str(1), fontname="helvetica",shape="circle",color="red")
+            dot.node(str(node.idx), str(1), fontname="helvetica",shape="circle",color="red")
         else:
-            dot.node(str(node.id), key_2_idx[node.key], fontname="helvetica",shape="circle",color="red")
+            dot.node(str(node.idx), key_2_idx[node.key], fontname="helvetica",shape="circle",color="red")
     else:
-        dot.node(str(node.id), str(node.key), fontname="helvetica",shape="circle",color="red")
+        dot.node(str(node.idx), str(node.key), fontname="helvetica",shape="circle",color="red")
     for k in range(node.succ_num):
-        if node.succ[k]:
+        if node.successor[k]:
             label1=str(complex(round(node.out_weight[k].r.val,2),round(node.out_weight[k].i.val,2)))
-            if not node.succ[k] in succ:
-                dot=layout(node.succ[k],key_2_idx,dot,succ,real_label)
-                dot.edge(str(node.id),str(node.succ[k].id),color=col[k%4],label=label1)
-                succ.append(node.succ[k])
+            if not node.successor[k] in succ:
+                dot=layout(node.successor[k],key_2_idx,dot,succ,real_label)
+                dot.edge(str(node.idx),str(node.successor[k].idx),color=col[k%4],label=label1)
+                succ.append(node.successor[k])
             else:
-                dot.edge(str(node.id),str(node.succ[k].id),color=col[k%4],label=label1)
+                dot.edge(str(node.idx),str(node.successor[k].idx),color=col[k%4],label=label1)
     return dot        
 
         
 def Ini_TDD(index_order=[],max_rank=200):
     """To initialize the unique_table,computed_table and set up a global index order"""
     global unique_table,computed_table,terminal_node,global_node_idx
-    global add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_times,cont_times
+    global add_find_time,add_hit_time,cont_find_time,cont_hit_time
 
     global_node_idx=0
+    
+    unique_table = {k:dict() for k in range(max_rank)}
+    
+    computed_table = {'+': {k:{k1: dict() for k1 in range(-1,max_rank)} for k in range(-1,max_rank)},'*': {k:{k1: dict() for k1 in range(-1,max_rank)} for k in range(-1,max_rank)}}
     add_find_time=0
     add_hit_time=0
     cont_find_time=0
     cont_hit_time=0
-    add_times = 0
-    cont_times = 0
-
-    unique_table = {k:dict() for k in range(max_rank)}
-    computed_table = dict()
-    computed_table['+'] = {k:{k1: dict() for k1 in range(-1,max_rank)} for k in range(-1,max_rank)}
-    computed_table['*'] = {k:{k1: dict() for k1 in range(-1,max_rank)} for k in range(-1,max_rank)}
     set_index_order(index_order)
     ini_complex(max_rank)
     terminal_node = Find_Or_Add_Unique_table(-1)
+    terminal_node.is_key_node=True
     return get_identity_tdd()
 
 def Clear_TDD():
     """To initialize the unique_table,computed_table and set up a global index order"""
-    global unique_table,computed_table,terminal_node,global_node_idx
+    global computed_table
+    global unique_table
+    global global_node_idx
     global add_find_time,add_hit_time,cont_find_time,cont_hit_time
     global_node_idx=0
     unique_table.clear()
@@ -242,9 +251,10 @@ def Clear_TDD():
 
 
 def get_identity_tdd():
-    tdd = TDD(terminal_node,cn1)
-    tdd.index_set = []
-    tdd.key_2_index = {}
+    node = terminal_node
+    tdd = TDD(node,cn1)
+    tdd.index_2_key={-1:-1}
+    tdd.key_2_index={-1:-1}
     return tdd
 
 def get_unique_table():
@@ -254,19 +264,18 @@ def get_unique_table_num():
     return len(unique_table)
 
 def set_index_order(var_order):
-    """the index with a bigger value should appear on the top"""
     global global_index_order
     global_index_order=dict()
     if isinstance(var_order,list):
         for k in range(len(var_order)):
-            global_index_order[var_order[k]] = k
+            global_index_order[var_order[k]]=k
     if isinstance(var_order,dict):
         global_index_order = copy.copy(var_order)
-    global_index_order[-1] = -1
+    global_index_order[-1] = float('inf')
     
 def get_index_order():
     global global_index_order
-    return global_index_order
+    return copy.copy(global_index_order)
     
 def get_int_key(weight):
     """To transform a complex number to a tuple with int values"""
@@ -277,8 +286,8 @@ def get_node_set(node,node_set=set()):
     if not node in node_set:
         node_set.add(node)
         for k in range(node.succ_num):
-            if node.succ[k]:
-                node_set = get_node_set(node.succ[k],node_set)
+            if node.successor[k]:
+                node_set = get_node_set(node.successor[k],node_set)
     return node_set
 
 def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
@@ -289,8 +298,8 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
         if unique_table.__contains__(x):
             return unique_table[x]
         else:
-            res=Node(x,0)
-            res.id=0
+            res=Node(x)
+            res.idx=0
             unique_table[x]=res
         return res
     temp_key = [(w.r, w.i) for w in weigs] + succ_nodes
@@ -301,9 +310,9 @@ def Find_Or_Add_Unique_table(x,weigs=[],succ_nodes=[]):
     else:
         res=Node(x,len(succ_nodes))
         global_node_idx+=1
-        res.id = global_node_idx
-        res.out_weight = weigs
-        res.succ = succ_nodes
+        res.idx=global_node_idx
+        res.out_weight=weigs
+        res.successor=succ_nodes
         unique_table[x][temp_key]=res
     return res
     
@@ -387,72 +396,62 @@ def normalize(x,the_successors,cached = False):
                 continue
             if the_successors[k].weight!=cn0 and the_successors[k].weight!=cn1:
                 releaseCached(the_successors[k].weight)
-
+#     print('526',x,res.weight,weigs[0],weigs[1])
     return res
               
               
 
 def get_count():
-    global add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_times,cont_times
+    global add_find_time,add_hit_time,cont_find_time,cont_hit_time
     print("add:",add_hit_time,'/',add_find_time,'/',add_hit_time/add_find_time)
     print("cont:",cont_hit_time,"/",cont_find_time,"/",cont_hit_time/cont_find_time)
-    print('add:',add_times,'cont:',cont_times)
 
-ttt_table = dict()
-
-ttt_table2 = dict()
-
-ttt_n = 0
-
-ttt_n2 = 0    
-    
 def find_computed_table(item):
     """To return the results that already exist"""
     global computed_table,add_find_time,add_hit_time,cont_find_time,cont_hit_time,add_hit_time2
     if item[0] == '+':
-            add_find_time+=1
-            the_key=(get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight),item[2].node)
-            if the_key in computed_table['+'][item[1].node.key][item[2].node.key]:
-                res = computed_table['+'][item[1].node.key][item[2].node.key][the_key]
-                add_hit_time+=1
-                if abs(res[0])<epi and abs(res[1])<epi:
-                    return TDD(terminal_node,cn0)
-                else:
-                    tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
-                    return tdd
+        key1=get_int_key(item[1].weight)
+        key2=get_int_key(item[2].weight)
+        the_key=(key1,item[1].node,key2,item[2].node)
+        add_find_time+=1
+        if computed_table['+'][item[1].node.key][item[2].node.key].__contains__(the_key):
+            res = computed_table['+'][item[1].node.key][item[2].node.key][the_key]
+            add_hit_time+=1
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
+            
+        the_key=(key2,item[2].node,key1,item[1].node)
+        if computed_table['+'][item[2].node.key][item[1].node.key].__contains__(the_key):
+            res = computed_table['+'][item[2].node.key][item[1].node.key][the_key]            
+            add_hit_time+=1
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
     else:
+        the_key=(item[1].node,item[2].node,item[3][0],item[3][1],item[4])
         cont_find_time+=1
-        
-        if item[1].node.id > item[2].node.id:
-            the_key=(item[2].node,item[1].node,item[4],item[3],item[5])
-            
-            if not the_key in ttt_table:
-                ttt_table[the_key]=0
-            
-            if computed_table['*'][item[2].node.key][item[1].node.key].__contains__(the_key):
-                res = computed_table['*'][item[2].node.key][item[1].node.key][the_key]
-                ttt_table[the_key]+=1
-                cont_hit_time+=1
-                if abs(res[0])<epi and abs(res[1])<epi:
-                    return TDD(terminal_node,cn0)
-                else:
-                    tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
-                    return tdd
-        else: 
-            the_key=(item[1].node,item[2].node,item[3],item[4],item[5])
-            
-            if not the_key in ttt_table:
-                ttt_table[the_key]=0            
-            
-            if computed_table['*'][item[1].node.key][item[2].node.key].__contains__(the_key):
-                res = computed_table['*'][item[1].node.key][item[2].node.key][the_key]
-                ttt_table[the_key]+=1
-                cont_hit_time+=1
-                if abs(res[0])<epi and abs(res[1])<epi:
-                    return TDD(terminal_node,cn0)
-                else:
-                    tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
-                    return tdd
+        if computed_table['*'][item[1].node.key][item[2].node.key].__contains__(the_key):
+            res = computed_table['*'][item[1].node.key][item[2].node.key][the_key]
+            cont_hit_time+=1
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
+        the_key=(item[2].node,item[1].node,item[3][1],item[3][0],item[4])
+        if computed_table['*'][item[2].node.key][item[1].node.key].__contains__(the_key):
+            cont_hit_time+=1
+            res = computed_table['*'][item[2].node.key][item[1].node.key][the_key]
+            if abs(res[0])<epi and abs(res[1])<epi:
+                return TDD(terminal_node,cn0)
+            else:
+                tdd = TDD(res[2],getCachedComplex2(res[0],res[1]))
+                return tdd
     return None
 
 def insert_2_computed_table(item,res):
@@ -460,49 +459,103 @@ def insert_2_computed_table(item,res):
     global computed_table,cont_time,find_time,hit_time
 
     if item[0] == '+':
-            computed_table['+'][item[1].node.key][item[2].node.key][(get_int_key(item[1].weight),item[1].node,get_int_key(item[2].weight) ,item[2].node)] = (res.weight.r.val,res.weight.i.val,res.node)
+        key1=get_int_key(item[1].weight)
+        key2=get_int_key(item[2].weight)        
+        the_key = (key1,item[1].node,key2,item[2].node)
+        computed_table['+'][item[1].node.key][item[2].node.key][the_key] = (res.weight.r.val,res.weight.i.val,res.node)
     else:
-        if item[1].node.id>item[2].node.id:
-            computed_table['*'][item[2].node.key][item[1].node.key][(item[2].node,item[1].node,item[4],item[3],item[5])] = (res.weight.r.val,res.weight.i.val,res.node)
-        else:
-            computed_table['*'][item[1].node.key][item[2].node.key][(item[1].node,item[2].node,item[3],item[4],item[5])] = (res.weight.r.val,res.weight.i.val,res.node)
-            
-        
-        
-        
+        the_key = (item[1].node,item[2].node,item[3][0],item[3][1],item[4])
+        computed_table['*'][item[1].node.key][item[2].node.key][the_key] = (res.weight.r.val,res.weight.i.val,res.node)
     
 def get_index_2_key(var):
-    var_sort = copy.copy(var)
+    var_sort=copy.copy(var)
     var_sort.sort()
+    var_sort.reverse()
+    idx_2_key={-1:-1}
+    key_2_idx={-1:-1}
     n=0
-    idx_2_key={}
-    key_2_idx={}
     for idx in var_sort:
-        if not idx.name in idx_2_key:
-            idx_2_key[idx.name] = n
-            key_2_idx[n] = idx.name
+        if not idx.key in idx_2_key:
+            idx_2_key[idx.key]=n
+            key_2_idx[n]=idx.key
             n+=1
-    return key_2_idx,idx_2_key
+    return idx_2_key,key_2_idx
     
 def get_tdd(U,var=[]):
- 
-    key_2_idx,idx_2_key = get_index_2_key(var)
     
+#     if len(var)==0 or not isinstance(var[0],Index):
+#         return np_2_tdd(U,var)
+    
+    idx_2_key, key_2_idx = get_index_2_key(var)
     order=[]
-    
     for idx in var:
-        order.append(idx_2_key[idx.name])
+        order.append(idx_2_key[idx.key])
         
     tdd = np_2_tdd(U,order)
-    tdd.index_set = var
-    tdd.key_2_index = key_2_idx
+    tdd.index_2_key=idx_2_key
+    tdd.key_2_index=key_2_idx
+    tdd.index_set=var
+    tdd.node.is_key_node=True
+#     if not order:
+#         order=list(range(U_dim))
+        
+#     for k in range(max(order)+1):
+#         split_pos=order.index(k)
+#         tdd.key_width[k]=U.shape[split_pos]
+        
+    return tdd    
+    
+def get_tdd2(U,var,idx_2_key=None):
+    #index is the index_set as the axis order of the matrix
+    U_dim=U.ndim
+    if sum(U.shape)==U_dim:
+        for k in range(U_dim):
+            U=U[0]
+        res=TDD(terminal_node,Find_Or_Add_Complex_table(getTempCachedComplex2(U)))
+        return res
+     
+    if not idx_2_key:
+        idx_2_key = get_index_2_key(var)
+        
+    min_index=min(var)
+    x=min_index.key
+    min_pos=var.index(min_index)
+#     print(min_pos)
+    new_var=copy.copy(var)
+    new_var[min_pos]=Index(-1)
+    split_U=np.split(U,2,min_pos)
+    new_var_key=[idx.key for idx in new_var]
+    
+    while x in new_var_key:
+        min_pos=new_var_key.index(x)
+        split_U[0]=np.split(split_U[0],2,min_pos)[0]
+        split_U[1]=np.split(split_U[1],2,min_pos)[1]
+        new_var[min_pos]=Index(-1)
+        new_var_key[min_pos]=-1
+        
+    low=get_tdd(split_U[0],new_var,idx_2_key)
+    high=get_tdd(split_U[1],new_var,idx_2_key)
+    tdd = normalize(idx_2_key[x], [low,high])
+    for k in range(len(idx_2_key)):
+        tdd.key_width[k]=2
+    tdd.index_2_key=idx_2_key
+    key_2_idx=dict()
+    for k in idx_2_key:
+        key_2_idx[idx_2_key[k]]=k
+    tdd.key_2_index=key_2_idx
+    
+    if idx_2_key[x]%2==1:
+        tdd.node.is_key_node=True
+    
+    
     return tdd
 
-def np_2_tdd(U,order=[]):
+def np_2_tdd(U,order=[],key_width=True):
     #index is the index_set as the axis order of the matrix
     U_dim=U.ndim
     U_shape=U.shape
     if sum(U_shape)==U_dim:
+        
         for k in range(U_dim):
             U=U[0]
         res=TDD(terminal_node,Find_Or_Add_Complex_table(getTempCachedComplex2(U)))
@@ -510,6 +563,12 @@ def np_2_tdd(U,order=[]):
     
     if not order:
         order=list(range(U_dim))
+    
+    if key_width:
+        the_width=dict()
+        for k in range(max(order)+1):
+            split_pos=order.index(k)
+            the_width[k]=U.shape[split_pos]
             
     x=max(order)
     split_pos=order.index(x)
@@ -524,9 +583,15 @@ def np_2_tdd(U,order=[]):
     
     the_successors=[]
     for k in range(U_shape[split_pos]):
-        res=np_2_tdd(split_U[k],copy.copy(order))
+        res=np_2_tdd(split_U[k],copy.copy(order),False)
         the_successors.append(res)
     tdd = normalize(x,the_successors)
+    
+    if key_width:
+        tdd.key_width=the_width
+        
+    if x%2==1:
+        tdd.node.is_key_node=True
     
     return tdd
     
@@ -551,6 +616,9 @@ def np_2_tdd2(U,split_pos=None):
     tdd = normalize(split_pos,the_successors)
     for k in range(len(U_shape)):
         tdd.key_width[k]=U_shape[k]
+        
+    if split_pos%2==1:
+        tdd.node.is_key_node=True
     return tdd
     
 def tdd_2_np(tdd,split_pos=None,key_repeat_num=dict()):
@@ -607,149 +675,88 @@ def get_measure_prob(tdd):
     p0=tdd.node.out_weight[0].r.val*tdd.node.out_weight[0].r.val+tdd.node.out_weight[0].i.val*tdd.node.out_weight[0].i.val
     p1=tdd.node.out_weight[1].r.val*tdd.node.out_weight[1].r.val+tdd.node.out_weight[1].i.val*tdd.node.out_weight[1].i.val
                 
-    tdd.node.meas_prob[0]=p0*sum(tdd.node.succ[0].meas_prob)*2**(tdd.node.key-tdd.node.succ[0].key-1)
-    tdd.node.meas_prob[1]=p1*sum(tdd.node.succ[1].meas_prob)*2**(tdd.node.key-tdd.node.succ[1].key-1)
+    tdd.node.meas_prob[0]=p0*sum(tdd.node.successor[0].meas_prob)*2**(tdd.node.key-tdd.node.successor[0].key-1)
+    tdd.node.meas_prob[1]=p1*sum(tdd.node.successor[1].meas_prob)*2**(tdd.node.key-tdd.node.successor[1].key-1)
     return tdd
 
-
-
-class new_key_node:
-    def __init__(self,level,new_key):
-        self.level = level
-        self.new_key = new_key
-        self.next = dict()
-        self.father = None
-        
-    def __eq__(self,other):
-        if self.level==other.level and self.new_key==other.new_key:
-            return true
-        else:
-            return False
-        
-    def __hash__(self):
-        return id(self)
     
-    def __str__(self):
-        temp = self
-        s=[]
-        while temp.level!=-1:
-            s.append(temp.new_key)
-            temp = temp.father
-        return str(s)
-        
-    def append_new_key(self,new_key):
-        if new_key in self.next:
-            return self.next[new_key]
-        else:
-            temp = new_key_node(self.level+1,new_key)
-            self.next[new_key] = temp
-            temp.father = self
-            return temp
-
-
-key_2_new_key_tree_header = new_key_node(-1,-1)
-
-
 def cont(tdd1,tdd2):
+
+    var_cont=[var for var in tdd1.index_set if var in tdd2.index_set]
+    var_out1=[var for var in tdd1.index_set if not var in var_cont]
+    var_out2=[var for var in tdd2.index_set if not var in var_cont]
+
+    var_out=var_out1+var_out2
+    var_out.sort()
+    var_out_idx=[var.key for var in var_out]
+    var_cont_idx=[var.key for var in var_cont]
+    var_cont_idx=[var for var in var_cont_idx if not var in var_out_idx]
     
-    var_cont = [] #to record the indices to be contracted
-    var_out = [] #ro record the indices to be remained
-    var_out_name = []
-    var_cont_name = []
+    idx_2_key={-1:-1}
+    key_2_idx={-1:-1}
     
-    for var1 in tdd1.index_set:
-        if not var1 in tdd2.index_set:
-            var_out.append(var1)
-            var_out_name.append(var1.name)
+    n=0
+    for k in range(len(var_out_idx)-1,-1,-1):
+        if not var_out_idx[k] in idx_2_key:
+            idx_2_key[var_out_idx[k]]=n
+            key_2_idx[n]=var_out_idx[k]
+            n+=1
+        
+    key_2_new_key=[[],[]]
+    cont_order=[[],[]]
+    for k in range(len(tdd1.key_2_index)-1):
+        v=tdd1.key_2_index[k]
+        if v in idx_2_key:
+            key_2_new_key[0].append(idx_2_key[v])
         else:
-            var_cont.append(var1)
-            
-    for var2 in tdd2.index_set:
-        if not var2 in tdd1.index_set:
-            var_out.append(var2)
-            var_out_name.append(var2.name)
-         
-    for var in var_cont:
-        if not var.name in var_out_name:
-            var_cont_name.append(var.name)
-
-
-    k1 = 0
-    k2 = 0
-    new_key = 0
-    m1 = len(tdd1.key_2_index)
-    m2 = len(tdd2.key_2_index)
-    key_2_new_key1 = key_2_new_key_tree_header
-    key_2_new_key2 = key_2_new_key_tree_header
-    new_key_2_index = dict()
-
-    while k1 < m1 or k2 < m2 :
-        if k1 == m1: 
-            for k2 in range(k2,m2):
-                key_2_new_key2 = key_2_new_key2.append_new_key(new_key)
-                new_key_2_index[new_key]=tdd2.key_2_index[k2]
-                new_key+=1
-            break
-                
-        if k2 == m2: 
-            for k1 in range(k1,m1):
-                key_2_new_key1 = key_2_new_key1.append_new_key(new_key)
-                new_key_2_index[new_key]=tdd1.key_2_index[k1]
-                new_key+=1
-            break
-        if global_index_order[tdd1.key_2_index[k1]] < global_index_order[tdd2.key_2_index[k2]]:
-            key_2_new_key1 = key_2_new_key1.append_new_key(new_key)
-            new_key_2_index[new_key]=tdd1.key_2_index[k1]
-            new_key+=1
-            k1+=1
-        elif global_index_order[tdd1.key_2_index[k1]] > global_index_order[tdd2.key_2_index[k2]]:
-            key_2_new_key2 = key_2_new_key2.append_new_key(new_key)
-            new_key_2_index[new_key]=tdd2.key_2_index[k2]
-            new_key+=1
-            k2+=1
-        elif tdd1.key_2_index[k1] in var_out_name:
-            key_2_new_key1 = key_2_new_key1.append_new_key(new_key)
-            key_2_new_key2 = key_2_new_key2.append_new_key(new_key)
-            new_key_2_index[new_key]=tdd1.key_2_index[k1]
-            new_key+=1
-            k1+=1
-            k2+=1
+            key_2_new_key[0].append('c')
+        cont_order[0].append(global_index_order[v])
+        
+    cont_order[0].append(float('inf'))
+    
+    for k in range(len(tdd2.key_2_index)-1):     
+        v=tdd2.key_2_index[k]
+        if v in idx_2_key:
+            key_2_new_key[1].append(idx_2_key[v])
         else:
-            key_2_new_key1 = key_2_new_key1.append_new_key(new_key-0.5)
-            key_2_new_key2 = key_2_new_key2.append_new_key(new_key-0.5)
-            k1+=1
-            k2+=1
+            key_2_new_key[1].append('c')
+        cont_order[1].append(global_index_order[v])
+    cont_order[1].append(float('inf'))
     
-#     print(key_2_new_key1)
-#     print(key_2_new_key2)
-    
+#     print('857 in cacheCount',cacheCount)
     cacheCount_in=cacheCount
-    tdd=contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,len(set(var_cont_name)))
+    tdd=contract(tdd1,tdd2,key_2_new_key,cont_order,len(set(var_cont_idx)))
     if not tdd.weight==cn0 and not tdd.weight==cn1:
         releaseCached(tdd.weight)
     tdd.weight=Find_Or_Add_Complex_table(tdd.weight)
-
+#     print('862 out cacheCount',cacheCount)
     if not cacheCount==cacheCount_in:
         print('Something went wrong, cacheCount not match')
     
     tdd.index_set=var_out
-    tdd.key_2_index = new_key_2_index
+    tdd.index_2_key=idx_2_key
+    tdd.key_2_index=key_2_idx
+    key_width=dict()
+    for k1 in range(len(key_2_new_key[0])):
+        if not key_2_new_key[0][k1]=='c' and not key_2_new_key[0][k1] ==-1:
+            key_width[key_2_new_key[0][k1]]=tdd1.key_width[k1]
+    for k2 in range(len(key_2_new_key[1])):
+        if not key_2_new_key[1][k2]=='c' and not key_2_new_key[1][k2] ==-1:
+            key_width[key_2_new_key[1][k2]]=tdd2.key_width[k2]             
+   
+    tdd.key_width=key_width
+#     print(tdd1.key_width,tdd2.key_width,tdd.key_width)
     return tdd
     
 
-def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
+def contract(tdd1,tdd2,key_2_new_key,cont_order,cont_num):
     """The contraction of two TDDs, var_cont is in the form [[4,1],[3,2]]"""
-    global cont_times
-    cont_times+=1
-    
-    
-#     print(tdd1.weight,tdd1.node.key,tdd2.weight,tdd2.node.key,cont_num)
-    
+
     k1=tdd1.node.key
     k2=tdd2.node.key
     w1=tdd1.weight
     w2=tdd2.weight
-
+#     print('930',k1,k2,w1,w2)
     if w1== cn0 or w2==cn0:
         return TDD(terminal_node,cn0)    
     
@@ -759,57 +766,75 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
             temp = getTempCachedComplex2(2**cont_num)
             cn_mul(tdd.weight,tdd.weight,temp)
         return tdd
-    
-
-        
-    while key_2_new_key2.level > k2:
-        key_2_new_key2=key_2_new_key2.father        
 
     if k1==-1:
-        if cont_num ==0 and key_2_new_key2.new_key==k2:
+        if cont_num ==0 and key_2_new_key[1][k2]==k2:
             tdd=TDD(tdd2.node,cn_mulCached(w1,w2))
             return tdd
             
-    while key_2_new_key1.level > k1:
-        key_2_new_key1=key_2_new_key1.father
-        
-    if k2==-1:      
-        if cont_num ==0 and key_2_new_key1.new_key==k1:
+    if k2==-1:
+#         if cont_num ==0 and key_2_new_key[0][k1]!=k1:
+#             print(767)        
+        if cont_num ==0 and key_2_new_key[0][k1]==k1:
             tdd=TDD(tdd1.node,cn_mulCached(w1,w2))
             return tdd
     
     tdd1.weight = cn1
     tdd2.weight = cn1
 
-    tdd = find_computed_table(['*',tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num])
-    if tdd:
-        tdd1.weight=w1
-        tdd2.weight=w2
-        if not tdd.weight==cn0:
-            cn_mul(tdd.weight,tdd.weight,w1)
-            cn_mul(tdd.weight,tdd.weight,w2)
-            if equalsZero(tdd.weight):
-                releaseCached(tdd.weight)
-                return TDD(terminal_node,cn0)
-        return tdd
+    temp_key_2_new_key=[]
+    temp_key_2_new_key.append(tuple([k for k in key_2_new_key[0][:(k1+1)]]))
+    temp_key_2_new_key.append(tuple([k for k in key_2_new_key[1][:(k2+1)]]))
+    
+    
+    tdd=None
+    store = False
+#     if cont_order[0][k1]<=cont_order[1][k2]:
+#         the_key=key_2_new_key[0][k1]
+#     else:
+#         the_key=key_2_new_key[1][k2]
+
+#     if tdd1.node.is_key_node and tdd2.node.is_key_node and the_key!='c':
+#         tdd = find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
+    
+#     if tdd:
+#         tdd1.weight=w1
+#         tdd2.weight=w2
+#         if not tdd.weight==cn0:
+#             cn_mul(tdd.weight,tdd.weight,w1)
+#             cn_mul(tdd.weight,tdd.weight,w2)
+#             if equalsZero(tdd.weight):
+#                 releaseCached(tdd.weight)
+#                 return TDD(terminal_node,cn0)
+#         return tdd
                 
-    new_key1 = key_2_new_key1.new_key
-    new_key2 = key_2_new_key2.new_key
-        
-    if new_key1 > new_key2: #the bigger new_key is supposed to be coped first
-        temp_key_2_new_key2 = key_2_new_key2
-        if (2*new_key1)%2==0:
+    if cont_order[0][k1]<cont_order[1][k2]:
+        the_key=key_2_new_key[0][k1]
+            
+        if the_key!='c':
+            if tdd1.node.is_key_node:
+                tdd = find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
+                store = True
+            if tdd:
+                tdd1.weight=w1
+                tdd2.weight=w2
+                if not tdd.weight==cn0:
+                    cn_mul(tdd.weight,tdd.weight,w1)
+                    cn_mul(tdd.weight,tdd.weight,w2)
+                    if equalsZero(tdd.weight):
+                        releaseCached(tdd.weight)
+                        return TDD(terminal_node,cn0)
+                return tdd             
+            
             the_successors=[]
             for k in range(tdd1.node.succ_num):
-                e1 = TDD(tdd1.node.succ[k],tdd1.node.out_weight[k])
-                res=contract(e1,tdd2,key_2_new_key1.father,temp_key_2_new_key2,cont_num)
+                res=contract(Slicing(tdd1,k1,k),tdd2,key_2_new_key,cont_order,cont_num)
                 the_successors.append(res)
-            tdd=normalize(new_key1,the_successors,True)
+            tdd=normalize(the_key,the_successors,True)
         else:
             tdd=TDD(terminal_node,cn0)
             for k in range(tdd1.node.succ_num):
-                e1 = TDD(tdd1.node.succ[k],tdd1.node.out_weight[k])
-                res=contract(e1,tdd2,key_2_new_key1.father,temp_key_2_new_key2,cont_num-1)
+                res=contract(Slicing(tdd1,k1,k),tdd2,key_2_new_key,cont_order,cont_num-1)
                 if tdd.weight==cn0:
                     tdd=res
                 elif res.weight != cn0:
@@ -817,21 +842,35 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
                     tdd=add(tdd,res)
                     releaseCached(old_w)
                     releaseCached(res.weight)
-    elif new_key1 == new_key2:
-        if (2*new_key1)%2==0:
+                    
+    elif cont_order[0][k1]==cont_order[1][k2]:
+        the_key=key_2_new_key[0][k1]      
+        
+        if the_key!='c':
+            
+            if tdd1.node.is_key_node and tdd2.node.is_key_node:
+                tdd = find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
+                store = True
+            if tdd:
+                tdd1.weight=w1
+                tdd2.weight=w2
+                if not tdd.weight==cn0:
+                    cn_mul(tdd.weight,tdd.weight,w1)
+                    cn_mul(tdd.weight,tdd.weight,w2)
+                    if equalsZero(tdd.weight):
+                        releaseCached(tdd.weight)
+                        return TDD(terminal_node,cn0)
+                return tdd             
+            
             the_successors=[]
             for k in range(tdd1.node.succ_num):
-                e1 = TDD(tdd1.node.succ[k],tdd1.node.out_weight[k])
-                e2 = TDD(tdd2.node.succ[k],tdd2.node.out_weight[k])
-                res=contract(e1,e2,key_2_new_key1.father,key_2_new_key2.father,cont_num)
+                res=contract(Slicing(tdd1,k1,k),Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num)
                 the_successors.append(res)
-            tdd=normalize(new_key1,the_successors,True)
+            tdd=normalize(the_key,the_successors,True)
         else:
             tdd=TDD(terminal_node,cn0)
             for k in range(tdd1.node.succ_num):
-                e1 = TDD(tdd1.node.succ[k],tdd1.node.out_weight[k])
-                e2 = TDD(tdd2.node.succ[k],tdd2.node.out_weight[k])                
-                res=contract(e1,e2,key_2_new_key1.father,key_2_new_key2.father,cont_num-1)           
+                res=contract(Slicing(tdd1,k1,k),Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num-1)           
                 if tdd.weight==cn0:
                     tdd=res
                 elif res.weight != cn0:
@@ -840,19 +879,33 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
                     releaseCached(old_w)
                     releaseCached(res.weight)
     else:
-        temp_key_2_new_key1 = key_2_new_key1
-        if (2*new_key2)%2==0:
+        the_key=key_2_new_key[1][k2]          
+        
+        if the_key!='c':
+            
+            if tdd2.node.is_key_node:
+                tdd = find_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num])
+                store = True
+            if tdd:
+                tdd1.weight=w1
+                tdd2.weight=w2
+                if not tdd.weight==cn0:
+                    cn_mul(tdd.weight,tdd.weight,w1)
+                    cn_mul(tdd.weight,tdd.weight,w2)
+                    if equalsZero(tdd.weight):
+                        releaseCached(tdd.weight)
+                        return TDD(terminal_node,cn0)
+                return tdd             
+            
             the_successors=[]
             for k in range(tdd2.node.succ_num):
-                e2 = TDD(tdd2.node.succ[k],tdd2.node.out_weight[k])
-                res=contract(tdd1,e2,temp_key_2_new_key1,key_2_new_key2.father,cont_num)
+                res=contract(tdd1,Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num)
                 the_successors.append(res)
-            tdd=normalize(new_key2,the_successors,True)
+            tdd=normalize(the_key,the_successors,True)
         else:
             tdd=TDD(terminal_node,cn0)
             for k in range(tdd2.node.succ_num):
-                e2 = TDD(tdd2.node.succ[k],tdd2.node.out_weight[k])
-                res=contract(tdd1,e2,temp_key_2_new_key1,key_2_new_key2.father,cont_num-1)           
+                res=contract(tdd1,Slicing(tdd2,k2,k),key_2_new_key,cont_order,cont_num-1)           
                 if tdd.weight==cn0:
                     tdd=res
                 elif res.weight != cn0:
@@ -860,8 +913,16 @@ def contract(tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num):
                     tdd=add(tdd,res)
                     releaseCached(old_w)
                     releaseCached(res.weight)
-     
-    insert_2_computed_table(['*',tdd1,tdd2,key_2_new_key1,key_2_new_key2,cont_num],tdd)
+                    
+#     if key_2_new_key[0][k1]!='c' or key_2_new_key[1][k2]!='c':
+#         tdd.node.is_key_node=True
+#     if key_2_new_key[0][k1]==k1 or key_2_new_key[0][k1]==key_2_new_key[1][k2]:
+#     if len(temp_key_2_new_key[0])%2==0 and len(temp_key_2_new_key[1])%2==0: 
+    if store:
+        tdd.node.is_key_node=True
+        insert_2_computed_table(['*',tdd1,tdd2,temp_key_2_new_key,cont_num],tdd)
+        
+        
     tdd1.weight=w1
     tdd2.weight=w2
     if not tdd.weight==cn0 and (w1!=cn1 or w2!=cn1):
@@ -889,7 +950,7 @@ def Slicing(tdd,x,c):
         return res
     
     if k==x:
-        res=TDD(tdd.node.succ[c],tdd.node.out_weight[c])
+        res=TDD(tdd.node.successor[c],tdd.node.out_weight[c])
         return res
     else:
         print("Not supported yet!!!")
@@ -900,14 +961,6 @@ def Slicing2(tdd,x,c):
 
     k=tdd.node.key
     
-    if k==x:
-        res=TDD(tdd.node.succ[c])
-        if tdd.node.out_weight[c]==cn0:
-            res.weight=cn0
-            return res
-        res.weight=cn_mulCached(tdd.node.out_weight[c],tdd.weight)
-        return res    
-    
     if k==-1:
         res = TDD(tdd.node,tdd.weight)
         return res
@@ -915,14 +968,21 @@ def Slicing2(tdd,x,c):
     if k<x:
         res = TDD(tdd.node,tdd.weight)
         return res
+    
+    if k==x:
+        res=TDD(tdd.node.successor[c])
+        if tdd.node.out_weight[c]==cn0:
+            res.weight=cn0
+            return res
+        res.weight=cn_mulCached(tdd.node.out_weight[c],tdd.weight)
+        return res
     else:
         print("Not supported yet!!!")        
         
         
 
 def add(tdd1,tdd2):
-    global add_times
-    add_times+=1
+
     k1=tdd1.node.key
     k2=tdd2.node.key
 #     print('add 1078',k1,k2,tdd1.weight,tdd2.weight)
@@ -946,31 +1006,23 @@ def add(tdd1,tdd2):
             res=TDD(tdd1.node,weig)
             return res
         
-    if tdd1.node.id > tdd2.node.id:
-        return add(tdd2,tdd1)
-    
-    w1 = tdd1.weight
-    w2 = tdd2.weight
-    
-    tdd1.weight = cn1
-    
-    tdd2.weight = cn_divCached(tdd2.weight,w1)
         
-    res = find_computed_table(['+',tdd1,tdd2])
-    if res:
-        tdd1.weight = w1
-        releaseCached(tdd2.weight)
-        tdd2.weight = w2
-        if not res.weight==cn0:
-            cn_mul(res.weight,res.weight,w1)
-            if equalsZero(res.weight):
-                releaseCached(res.weight)
-                return TDD(terminal_node,cn0)
-        return res
+#     res=None
+#     if tdd1.node.is_key_node and tdd2.node.is_key_node:
+#         res = find_computed_table(['+',tdd1,tdd2])
+#     if res:
+#         return res
     
+    store= False
     the_successors=[]
     if k1>k2:
         x=k1
+        if tdd1.node.is_key_node:
+            res = find_computed_table(['+',tdd1,tdd2])
+            if res:
+                return res
+            store=True
+        
         for k in range(tdd1.node.succ_num):
             e1 = Slicing2(tdd1,x,k)
             e2 = tdd2
@@ -980,6 +1032,12 @@ def add(tdd1,tdd2):
                 releaseCached(e1.weight)
     elif k1==k2:
         x=k1
+        if tdd1.node.is_key_node and tdd2.node.is_key_node:
+            res = find_computed_table(['+',tdd1,tdd2])
+            if res:
+                return res
+            store=True
+        
         for k in range(tdd1.node.succ_num):
             e1=Slicing2(tdd1,x,k)
             e2=Slicing2(tdd2,x,k)
@@ -991,6 +1049,12 @@ def add(tdd1,tdd2):
                 releaseCached(e2.weight)              
     else:
         x=k2
+        if tdd2.node.is_key_node:
+            res = find_computed_table(['+',tdd1,tdd2])
+            if res:
+                return res
+            store=True
+        
         for k in range(tdd2.node.succ_num):
             e1=tdd1
             e2=Slicing2(tdd2,x,k)
@@ -999,13 +1063,12 @@ def add(tdd1,tdd2):
             if not e2.weight==cn0:
                 releaseCached(e2.weight)
                 
+#     print('add 1137',x,the_successors[0].weight,the_successors[1].weight)
     res = normalize(x,the_successors,True)
-    insert_2_computed_table(['+',tdd1,tdd2],res)
-    tdd1.weight = w1
-    releaseCached(tdd2.weight)
-    tdd2.weight = w2
-    if not res.weight == cn0:
-        cn_mul(res.weight,res.weight,w1)
+#     print('add 1139',x,res.weight)
+    if store==True:
+        res.node.is_key_node=True
+        insert_2_computed_table(['+',tdd1,tdd2],res)
     return res
 
 
