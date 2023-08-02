@@ -1,7 +1,7 @@
 # A-Tensor-Network-Based-Decision-Diagram
 ## Overview
 Decision diagrams have been used in the simulation and equivalence checking of quantum circuits. Inspired by the efficiency and flexibility of Tensor Networks. A tensor network-based decision diagram has been proposed at https://dl.acm.org/doi/10.1145/3514355. This repository gives a proof-of-concept implementation of the Tensor Decision Diagram(TDD) using Python3. 
-Part of the benchmarks is coming from https://github.com/iic-jku/qmap/tree/master/examples.
+Part of the benchmarks is coming from https://github.com/iic-jku/qmap/tree/master/examples. For an efficient C++ version of TDD, please see https://github.com/Veriqc/TDD_C.
 
 ## Dependencies
 In order to use this package, you are expected first to install the following packages: numpy, networkx, qiskit and graphviz. The data type of numpy is used to define the data of a tensor in our package. Networkx will be used as part of an optimizer in this package. Qiskit is used for coping with Quantum Circuits, and Graphviz is used for showing the graph of a TDD.
