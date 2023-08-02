@@ -1,6 +1,6 @@
 # A-Tensor-Network-Based-Decision-Diagram
 ## Overview
-Decision diagrams have been used in the simulation and equivalence checking of quantum circuits. Inspired by the efficiency and flexibility of Tensor Networks. A tensor network-based decision diagram has been proposed at https://arxiv.org/abs/2009.02618. This repository gives a proof-of-concept implementation of the Tensor Decision Diagram(TDD) using Python3. 
+Decision diagrams have been used in the simulation and equivalence checking of quantum circuits. Inspired by the efficiency and flexibility of Tensor Networks. A tensor network-based decision diagram has been proposed at https://dl.acm.org/doi/10.1145/3514355. This repository gives a proof-of-concept implementation of the Tensor Decision Diagram(TDD) using Python3. 
 Part of the benchmarks is coming from https://github.com/iic-jku/qmap/tree/master/examples.
 
 ## Dependencies
