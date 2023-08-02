@@ -1,5 +1,6 @@
 import numpy as np
 from TDD.TN import Index,Tensor,TensorNetwork
+from TDD.TDD import Ini_TDD
 from qiskit.quantum_info.operators import Operator
 import time
 
@@ -286,4 +287,22 @@ def gen_cir(name=None,qubit_num = 1,gate_num = 1, save = False,path='test.qasm')
                 eval('cir.'+g+str(tuple([q])))
         if save:
             save_cir(cir,path)                
+        return cir
+
+    if name == 'CX':
+        gate_set = ['cx']
+
+        for k in range(gate_num):
+            g = gate_set[random.randint(0, len(gate_set) - 1)]
+            q = random.randint(0, qubit_num - 1)
+            if g == 'cx':
+                q2 = random.randint(0, qubit_num - 1)
+                while q2 == q:
+                    q2 = random.randint(0, qubit_num - 1)
+                eval('cir.' + g + str(tuple([q, q2])))
+            else:
+                eval('cir.' + g + str(tuple([q])))
+        if save:
+            save_cir(cir, path)
+
         return cir
