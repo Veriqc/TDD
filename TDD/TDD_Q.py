@@ -166,6 +166,8 @@ def cir_2_tn(cir,input_s=[],output_s=[]):
 def add_inputs(tn,input_s,qubits_num):
     U0=np.array([1,0])
     U1=np.array([0,1])
+    U_p=1/np.sqrt(2)*np.array([1,1])
+    U_m=1/np.sqrt(2)*np.array([1,-1])
     if len(input_s)!= qubits_num:
         print("inputs is not match qubits number")
         return 
